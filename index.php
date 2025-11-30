@@ -173,7 +173,7 @@
       </div>
       <div class="col-md-3 team-member">
         <h5>Dave Parker</h5>
-        <p>Driver</p>
+        <p>Driver <span style="color:#fff; opacity: 0.8">(5 races)</span></p>
       </div>
       <div class="col-md-3 team-member">
         <h5>Tomek Zet</h5>
@@ -193,7 +193,7 @@
       </div>
       <div class="col-md-3 team-member">
         <h5>James Addison</h5>
-        <p>Driver</p>
+        <p>Driver <span style="color:#fff; opacity: 0.8">(12 races)</span></p>
       </div>
       <div class="col-md-3 team-member">
         <h5>Daniel Lane</h5>

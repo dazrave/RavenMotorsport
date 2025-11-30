@@ -149,35 +149,55 @@
 <!-- Team Section -->
 <section class="section fade-in-section bg-black text-light">
   <div class="container">
-    <h2 class="text-center mb-4">Last Years Team</h2>
+    <h2 class="text-center mb-4">2026 Team Lineup</h2>
     <div class="row g-4 justify-content-center">
       <div class="col-md-3 team-member">
-        <h5>Darren Ravenscroft</h5>
-        <p>Team Principal & Driver <span style="color:#fff; opacity: 0.8">(8 races)</span></p>
+        <h5>Tim Hockham</h5>
+        <p>Race Manager</p>
       </div>
       <div class="col-md-3 team-member">
-        <h5>Tim Hockham</h5>
-        <p>Race Manager <span style="color:#fff; opacity: 0.8">(6 races)</span></p>
+        <h5>Adrian Herrero Sanchez</h5>
+        <p>Race Manager</p>
+      </div>
+      <div class="col-md-3 team-member">
+        <h5>Darren Ravenscroft</h5>
+        <p>Team Principal & Driver</p>
       </div>
       <div class="col-md-3 team-member">
         <h5>Andy Tait</h5>
-        <p>Driver <span style="color:#fff; opacity: 0.8">(7 races)</span></p>
+        <p>Driver</p>
       </div>
       <div class="col-md-3 team-member">
         <h5>Matt Casey</h5>
-        <p>Driver <span style="color:#fff; opacity: 0.8">(4 races)</span></p>
+        <p>Driver</p>
+      </div>
+      <div class="col-md-3 team-member">
+        <h5>Dave Parker</h5>
+        <p>Driver</p>
       </div>
       <div class="col-md-3 team-member">
         <h5>Tomek Zet</h5>
-        <p>Driver <span style="color:#fff; opacity: 0.8">(2 races)</span></p>
+        <p>Driver</p>
       </div>
       <div class="col-md-3 team-member">
-        <h5>Tom Bradbury</h5>
-        <p>Driver <span style="color:#fff; opacity: 0.8">(2 races)</span></p>
+        <h5>Ryan Welch</h5>
+        <p>Driver</p>
       </div>
       <div class="col-md-3 team-member">
-        <h5>George Kenning</h5>
-        <p>Reserve Driver (1 race)</p>
+        <h5>Luke Gore</h5>
+        <p>Driver</p>
+      </div>
+      <div class="col-md-3 team-member">
+        <h5>James Eaton</h5>
+        <p>Driver</p>
+      </div>
+      <div class="col-md-3 team-member">
+        <h5>James Addison</h5>
+        <p>Driver</p>
+      </div>
+      <div class="col-md-3 team-member">
+        <h5>Daniel Lane</h5>
+        <p>Driver</p>
       </div>
     </div>
   </div>

@@ -153,7 +153,7 @@
     <div class="row g-4 justify-content-center">
       <div class="col-md-3 team-member">
         <h5>Tim Hockham</h5>
-        <p>Race Manager</p>
+        <p>Race Manager <span style="color:#fff; opacity: 0.8">(6 races)</span></p>
       </div>
       <div class="col-md-3 team-member">
         <h5>Adrian Herrero Sanchez</h5>
@@ -161,15 +161,15 @@
       </div>
       <div class="col-md-3 team-member">
         <h5>Darren Ravenscroft</h5>
-        <p>Team Principal & Driver</p>
+        <p>Team Principal & Driver <span style="color:#fff; opacity: 0.8">(8 races)</span></p>
       </div>
       <div class="col-md-3 team-member">
         <h5>Andy Tait</h5>
-        <p>Driver</p>
+        <p>Driver <span style="color:#fff; opacity: 0.8">(7 races)</span></p>
       </div>
       <div class="col-md-3 team-member">
         <h5>Matt Casey</h5>
-        <p>Driver</p>
+        <p>Driver <span style="color:#fff; opacity: 0.8">(4 races)</span></p>
       </div>
       <div class="col-md-3 team-member">
         <h5>Dave Parker</h5>
@@ -177,7 +177,7 @@
       </div>
       <div class="col-md-3 team-member">
         <h5>Tomek Zet</h5>
-        <p>Driver</p>
+        <p>Driver <span style="color:#fff; opacity: 0.8">(2 races)</span></p>
       </div>
       <div class="col-md-3 team-member">
         <h5>Ryan Welch</h5>

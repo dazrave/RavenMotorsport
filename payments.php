@@ -184,6 +184,27 @@ if (isset($_SESSION['admin'])) {
         }
     }
 
+    // Delete payment
+    if (isset($_POST['delete_payment'])) {
+        $paymentId = intval($_POST['payment_id']);
+
+        // Get payment details before deleting for success message
+        $paymentDetails = $db->querySingle("
+            SELECT d.name as driver_name, i.name as installment_name, p.amount
+            FROM payments p
+            JOIN drivers d ON p.driver_id = d.id
+            JOIN installments i ON p.installment_id = i.id
+            WHERE p.id = $paymentId
+        ", true);
+
+        if ($paymentDetails) {
+            $db->exec("DELETE FROM payments WHERE id=$paymentId");
+            $success = "Deleted £" . number_format($paymentDetails['amount'], 2) . " payment for " . htmlspecialchars($paymentDetails['driver_name']) . " (" . htmlspecialchars($paymentDetails['installment_name']) . ")";
+        } else {
+            $error = "Payment not found";
+        }
+    }
+
     // Update team entry cost
     if (isset($_POST['update_team_costs'])) {
         $alphaId = $db->querySingle("SELECT id FROM teams WHERE name='Alpha'");
@@ -811,7 +832,7 @@ if (isset($_SESSION['admin'])) {
         <!-- Recent Payments -->
         <?php if (count($recentPayments) > 0): ?>
           <div class="mt-4">
-            <h5 class="h6">Recent Payments (Last 10)</h5>
+            <h5 class="h6">Recent Payments (Last 10) <small class="text-muted">- See "All Payments" section below for complete history</small></h5>
             <div class="table-responsive">
               <table class="table table-dark table-sm">
                 <thead>
@@ -820,6 +841,7 @@ if (isset($_SESSION['admin'])) {
                     <th>Driver</th>
                     <th>Installment</th>
                     <th class="text-end">Amount</th>
+                    <th class="text-end">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -829,6 +851,12 @@ if (isset($_SESSION['admin'])) {
                       <td><?php echo htmlspecialchars($payment['driver_name']); ?></td>
                       <td><?php echo htmlspecialchars($payment['installment_name']); ?></td>
                       <td class="text-end">£<?php echo number_format($payment['amount'], 2); ?></td>
+                      <td class="text-end">
+                        <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this £<?php echo number_format($payment['amount'], 2); ?> payment?');">
+                          <input type="hidden" name="payment_id" value="<?php echo $payment['id']; ?>">
+                          <button type="submit" name="delete_payment" class="btn btn-danger btn-sm">Delete</button>
+                        </form>
+                      </td>
                     </tr>
                   <?php endforeach; ?>
                 </tbody>
@@ -877,6 +905,54 @@ if (isset($_SESSION['admin'])) {
                   </td>
                 </tr>
               <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- All Payments Management -->
+      <div class="admin-panel">
+        <h4>All Payments</h4>
+        <p class="small text-light">View and manage all recorded payments. Click Delete to remove a payment.</p>
+        <div class="table-responsive">
+          <table class="table table-dark table-sm table-hover">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Driver</th>
+                <th>Team</th>
+                <th>Installment</th>
+                <th class="text-end">Amount</th>
+                <th class="text-end">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php
+              // Get all payments
+              $result = $db->query("
+                  SELECT p.*, d.name as driver_name, t.name as team_name, i.name as installment_name
+                  FROM payments p
+                  JOIN drivers d ON p.driver_id = d.id
+                  JOIN teams t ON d.team_id = t.id
+                  JOIN installments i ON p.installment_id = i.id
+                  ORDER BY p.created_at DESC
+              ");
+              while ($payment = $result->fetchArray(SQLITE3_ASSOC)):
+              ?>
+                <tr>
+                  <td><?php echo date('d M Y H:i', strtotime($payment['created_at'])); ?></td>
+                  <td><?php echo htmlspecialchars($payment['driver_name']); ?></td>
+                  <td><?php echo htmlspecialchars($payment['team_name']); ?></td>
+                  <td><?php echo htmlspecialchars($payment['installment_name']); ?></td>
+                  <td class="text-end"><strong>£<?php echo number_format($payment['amount'], 2); ?></strong></td>
+                  <td class="text-end">
+                    <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this £<?php echo number_format($payment['amount'], 2); ?> payment for <?php echo htmlspecialchars($payment['driver_name']); ?>?');">
+                      <input type="hidden" name="payment_id" value="<?php echo $payment['id']; ?>">
+                      <button type="submit" name="delete_payment" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                  </td>
+                </tr>
+              <?php endwhile; ?>
             </tbody>
           </table>
         </div>

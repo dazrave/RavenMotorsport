@@ -64,7 +64,12 @@ sshpass -p 'EqualPurpleMouse' ssh -o StrictHostKeyChecking=no root@192.168.0.23 
   - Select driver, installment, and amount
   - Payments automatically accumulate (e.g., £100 now + £100 later = £200 total)
   - Tracks payment history with timestamps
-  - Shows last 10 payments
+  - Shows last 10 payments in "Recent Payments" section
+- **Payment Deletion**: Delete individual payments from the system
+  - Delete button available in Recent Payments section (last 10)
+  - "All Payments" section shows complete payment history with delete options
+  - Confirmation dialog before deletion
+  - Displays payment amount, driver name, and team for verification
 - View total collected and outstanding balances across all drivers
 - Driver payments overview table showing all payments at a glance
 

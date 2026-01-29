@@ -218,7 +218,6 @@
       <h2 class="mb-4">Quick Links</h2>
       <a href="https://speedhive.mylaps.com/livetiming/52F470FC643E52C0-2147483649" class="btn btn-outline-light m-2">Live Results</a>
       <a href="https://pitwall.ravenmotorsport.com/" class="btn btn-outline-light m-2">Management</a>
-      <a href="/payments.php" class="btn btn-outline-light m-2">Payment Tracker</a>
       <a href="#" class="btn btn-outline-light m-2 d-none">Photo Gallery</a>
     </div>
   </section>

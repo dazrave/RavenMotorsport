@@ -22,7 +22,7 @@ if (!file_exists($dataFile)) {
             'Daniel Lane' => ['deposit' => 200, 'installment1' => 0, 'installment2' => 0, 'role' => 'Driver', 'team' => 'Bravo']
         ],
         'deadlines' => [
-            'deposit' => '2025-12-31',
+            'deposit' => '2026-01-01',
             'installment1' => '2026-02-01',
             'installment2' => '2026-03-01'
         ],
@@ -72,8 +72,14 @@ if (isset($_POST['update_deadlines']) && isset($_SESSION['admin'])) {
     $success = "Deadlines and total updated";
 }
 
-// Handle driver selection
-$selectedDriver = isset($_POST['select_driver']) ? $_POST['driver_name'] : (isset($_GET['driver']) ? $_GET['driver'] : null);
+// Calculate totals
+$totalCollected = 0;
+$totalOutstanding = 0;
+foreach ($paymentData['drivers'] as $driver) {
+    $paid = $driver['deposit'] + $driver['installment1'] + $driver['installment2'];
+    $totalCollected += $paid;
+    $totalOutstanding += ($paymentData['total_per_driver'] - $paid);
+}
 
 ?>
 <!DOCTYPE html>
@@ -92,44 +98,88 @@ $selectedDriver = isset($_POST['select_driver']) ? $_POST['driver_name'] : (isse
     }
     header {
       text-align: center;
-      padding: 60px 20px 20px;
+      padding: 40px 20px 20px;
     }
     header img {
-      max-width: 260px;
+      max-width: 200px;
       height: auto;
       margin-bottom: 12px;
     }
-    h2, h3 {
+    h2, h3, h4 {
       color: #8b241d;
     }
     .section {
-      padding: 2rem 0;
+      padding: 1rem 0;
     }
     .payment-card {
       background: #1a1a1a;
       border: 1px solid #333;
       border-radius: 8px;
-      padding: 2rem;
-      margin-bottom: 1rem;
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+    }
+    .driver-name {
+      font-size: 1.1rem;
+      font-weight: bold;
+      margin-bottom: 0.25rem;
+    }
+    .driver-info {
+      font-size: 0.85rem;
+      color: #aaa;
+      margin-bottom: 0.5rem;
+    }
+    .payment-status {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+    }
+    .payment-badge {
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: bold;
+      flex: 1;
+      min-width: 80px;
+      text-align: center;
     }
     .paid {
-      color: #28a745;
-      font-weight: bold;
+      background: #28a745;
+      color: #fff;
     }
     .unpaid {
-      color: #dc3545;
-      font-weight: bold;
+      background: #dc3545;
+      color: #fff;
     }
     .pending {
-      color: #ffc107;
-      font-weight: bold;
+      background: #ffc107;
+      color: #000;
     }
-    .deadline {
-      background: #8b241d;
-      padding: 0.5rem 1rem;
+    .partial {
+      background: #ff8c00;
+      color: #fff;
+    }
+    .progress {
+      height: 20px;
+      background-color: #333;
+      margin-top: 0.5rem;
       border-radius: 4px;
-      display: inline-block;
+    }
+    .progress-bar {
+      background-color: #8b241d;
+      font-weight: bold;
+      font-size: 0.75rem;
+    }
+    .deadline-box {
+      background: #8b241d;
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+      text-align: center;
+    }
+    .deadline-item {
       margin: 0.5rem 0;
+      font-size: 0.9rem;
     }
     .btn-primary {
       background-color: #8b241d;
@@ -139,27 +189,33 @@ $selectedDriver = isset($_POST['select_driver']) ? $_POST['driver_name'] : (isse
       background-color: #6d1c16;
       border-color: #6d1c16;
     }
-    .progress {
-      height: 30px;
-      background-color: #333;
-    }
-    .progress-bar {
-      background-color: #8b241d;
-      font-weight: bold;
-    }
     .admin-panel {
       background: #1a1a1a;
       border: 2px solid #8b241d;
       border-radius: 8px;
-      padding: 2rem;
-      margin: 2rem 0;
+      padding: 1.5rem;
+      margin: 1rem 0;
+    }
+    .summary-card {
+      background: #2a2a2a;
+      padding: 1rem;
+      border-radius: 8px;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    .summary-amount {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #8b241d;
     }
     table {
       color: #fff;
+      font-size: 0.9rem;
     }
     table th {
       color: #8b241d;
       border-bottom: 2px solid #8b241d;
+      font-size: 0.85rem;
     }
     table td {
       border-bottom: 1px solid #333;
@@ -176,6 +232,50 @@ $selectedDriver = isset($_POST['select_driver']) ? $_POST['driver_name'] : (isse
     }
     .alert {
       border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    .team-header {
+      background: #8b241d;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      margin: 1.5rem 0 1rem 0;
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+    footer {
+      background: #000;
+      color: #ccc;
+      text-align: center;
+      padding: 20px 0;
+      font-size: 0.9rem;
+      margin-top: 2rem;
+    }
+
+    /* Mobile optimizations */
+    @media (max-width: 768px) {
+      header img {
+        max-width: 150px;
+      }
+      .payment-badge {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.4rem;
+        min-width: 70px;
+      }
+      .driver-name {
+        font-size: 1rem;
+      }
+      table {
+        font-size: 0.75rem;
+      }
+      table th, table td {
+        padding: 0.5rem 0.25rem;
+      }
+      .summary-amount {
+        font-size: 1.2rem;
+      }
+      .admin-panel {
+        padding: 1rem;
+      }
     }
   </style>
 </head>
@@ -185,7 +285,7 @@ $selectedDriver = isset($_POST['select_driver']) ? $_POST['driver_name'] : (isse
     <p>Payment Tracker | Daytona 24 Hours 2026</p>
   </header>
 
-  <div class="container section">
+  <div class="container-fluid px-3 px-md-4">
     <?php if (isset($error)): ?>
       <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
     <?php endif; ?>
@@ -196,130 +296,161 @@ $selectedDriver = isset($_POST['select_driver']) ? $_POST['driver_name'] : (isse
 
     <?php if (!isset($_SESSION['admin'])): ?>
       <!-- DRIVER VIEW -->
-      <div class="row justify-content-center">
-        <div class="col-lg-8">
-          <h2 class="text-center mb-4">Driver Payment Portal</h2>
-
-          <?php if (!$selectedDriver): ?>
-            <!-- Driver Selection -->
-            <div class="payment-card">
-              <h4 class="mb-3">Select Your Name</h4>
-              <form method="POST">
-                <select name="driver_name" class="form-control mb-3" required>
-                  <option value="">-- Select Driver --</option>
-                  <?php foreach ($paymentData['drivers'] as $name => $data): ?>
-                    <option value="<?php echo htmlspecialchars($name); ?>"><?php echo htmlspecialchars($name); ?></option>
-                  <?php endforeach; ?>
-                </select>
-                <button type="submit" name="select_driver" class="btn btn-primary w-100">View My Payments</button>
-              </form>
+      <div class="row">
+        <div class="col-12">
+          <!-- Payment Deadlines -->
+          <div class="deadline-box">
+            <h4 class="mb-3" style="color: #fff;">Payment Schedule</h4>
+            <div class="deadline-item">
+              <strong>Deposit (£200):</strong> Due <?php echo date('d M Y', strtotime($paymentData['deadlines']['deposit'])); ?>
             </div>
-          <?php else: ?>
-            <!-- Driver Payment Details -->
-            <?php
-            $driver = $paymentData['drivers'][$selectedDriver];
-            $totalPaid = $driver['deposit'] + $driver['installment1'] + $driver['installment2'];
-            $totalDue = $paymentData['total_per_driver'];
-            $percentPaid = ($totalDue > 0) ? ($totalPaid / $totalDue) * 100 : 0;
-            ?>
+            <div class="deadline-item">
+              <strong>Installment 1:</strong> Due <?php echo date('d M Y', strtotime($paymentData['deadlines']['installment1'])); ?>
+            </div>
+            <div class="deadline-item">
+              <strong>Installment 2:</strong> Due <?php echo date('d M Y', strtotime($paymentData['deadlines']['installment2'])); ?>
+            </div>
+            <div class="mt-3" style="font-size: 0.85rem; opacity: 0.9;">
+              Total per driver: <strong>£<?php echo number_format($paymentData['total_per_driver'], 2); ?></strong>
+            </div>
+          </div>
 
-            <div class="payment-card">
-              <h3 class="mb-3"><?php echo htmlspecialchars($selectedDriver); ?></h3>
-              <p class="text-muted"><?php echo htmlspecialchars($driver['role']); ?></p>
+          <!-- Summary Stats -->
+          <div class="row mb-3">
+            <div class="col-6 col-md-6">
+              <div class="summary-card">
+                <div class="summary-amount">£<?php echo number_format($totalCollected, 2); ?></div>
+                <div style="font-size: 0.85rem; color: #aaa;">Total Collected</div>
+              </div>
+            </div>
+            <div class="col-6 col-md-6">
+              <div class="summary-card">
+                <div class="summary-amount">£<?php echo number_format($totalOutstanding, 2); ?></div>
+                <div style="font-size: 0.85rem; color: #aaa;">Outstanding</div>
+              </div>
+            </div>
+          </div>
 
-              <div class="mb-4">
-                <h5>Payment Progress</h5>
-                <div class="progress">
-                  <div class="progress-bar" role="progressbar" style="width: <?php echo $percentPaid; ?>%"
-                       aria-valuenow="<?php echo $percentPaid; ?>" aria-valuemin="0" aria-valuemax="100">
-                    £<?php echo number_format($totalPaid, 2); ?> / £<?php echo number_format($totalDue, 2); ?>
+          <!-- Alpha Team -->
+          <div class="team-header">Alpha Team</div>
+          <?php foreach ($paymentData['drivers'] as $name => $driver): ?>
+            <?php if (isset($driver['team']) && $driver['team'] === 'Alpha'): ?>
+              <?php
+              $totalPaid = $driver['deposit'] + $driver['installment1'] + $driver['installment2'];
+              $totalDue = $paymentData['total_per_driver'];
+              $percentPaid = ($totalDue > 0) ? ($totalPaid / $totalDue) * 100 : 0;
+              ?>
+              <div class="payment-card">
+                <div class="driver-name"><?php echo htmlspecialchars($name); ?></div>
+                <div class="driver-info"><?php echo htmlspecialchars($driver['role']); ?></div>
+
+                <div class="payment-status">
+                  <div class="payment-badge <?php echo $driver['deposit'] >= 200 ? 'paid' : ($driver['deposit'] > 0 ? 'partial' : 'unpaid'); ?>">
+                    Deposit: £<?php echo number_format($driver['deposit'], 0); ?>
+                  </div>
+                  <div class="payment-badge <?php echo $driver['installment1'] > 0 ? 'paid' : (strtotime($paymentData['deadlines']['installment1']) > time() ? 'pending' : 'unpaid'); ?>">
+                    Inst 1: £<?php echo number_format($driver['installment1'], 0); ?>
+                  </div>
+                  <div class="payment-badge <?php echo $driver['installment2'] > 0 ? 'paid' : (strtotime($paymentData['deadlines']['installment2']) > time() ? 'pending' : 'unpaid'); ?>">
+                    Inst 2: £<?php echo number_format($driver['installment2'], 0); ?>
                   </div>
                 </div>
-                <p class="mt-2">
-                  <?php if ($totalPaid >= $totalDue): ?>
-                    <span class="paid">✓ Fully Paid</span>
-                  <?php else: ?>
-                    <span class="unpaid">Outstanding: £<?php echo number_format($totalDue - $totalPaid, 2); ?></span>
-                  <?php endif; ?>
-                </p>
+
+                <div class="progress">
+                  <div class="progress-bar" role="progressbar" style="width: <?php echo $percentPaid; ?>%">
+                    £<?php echo number_format($totalPaid, 0); ?> / £<?php echo number_format($totalDue, 0); ?>
+                  </div>
+                </div>
               </div>
+            <?php endif; ?>
+          <?php endforeach; ?>
 
-              <h5>Payment Breakdown</h5>
-              <table class="table table-dark table-striped">
-                <thead>
-                  <tr>
-                    <th>Payment</th>
-                    <th>Deadline</th>
-                    <th>Amount</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>Deposit</td>
-                    <td><?php echo date('d M Y', strtotime($paymentData['deadlines']['deposit'])); ?></td>
-                    <td>£<?php echo number_format($driver['deposit'], 2); ?></td>
-                    <td>
-                      <?php if ($driver['deposit'] >= 200): ?>
-                        <span class="paid">✓ Paid</span>
-                      <?php else: ?>
-                        <span class="unpaid">✗ Unpaid</span>
-                      <?php endif; ?>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Installment 1</td>
-                    <td><?php echo date('d M Y', strtotime($paymentData['deadlines']['installment1'])); ?></td>
-                    <td>£<?php echo number_format($driver['installment1'], 2); ?></td>
-                    <td>
-                      <?php if ($driver['installment1'] > 0): ?>
-                        <span class="paid">✓ Paid</span>
-                      <?php elseif (strtotime($paymentData['deadlines']['installment1']) > time()): ?>
-                        <span class="pending">⧗ Pending</span>
-                      <?php else: ?>
-                        <span class="unpaid">✗ Overdue</span>
-                      <?php endif; ?>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Installment 2</td>
-                    <td><?php echo date('d M Y', strtotime($paymentData['deadlines']['installment2'])); ?></td>
-                    <td>£<?php echo number_format($driver['installment2'], 2); ?></td>
-                    <td>
-                      <?php if ($driver['installment2'] > 0): ?>
-                        <span class="paid">✓ Paid</span>
-                      <?php elseif (strtotime($paymentData['deadlines']['installment2']) > time()): ?>
-                        <span class="pending">⧗ Pending</span>
-                      <?php else: ?>
-                        <span class="unpaid">✗ Overdue</span>
-                      <?php endif; ?>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+          <!-- Bravo Team -->
+          <div class="team-header">Bravo Team</div>
+          <?php foreach ($paymentData['drivers'] as $name => $driver): ?>
+            <?php if (isset($driver['team']) && $driver['team'] === 'Bravo'): ?>
+              <?php
+              $totalPaid = $driver['deposit'] + $driver['installment1'] + $driver['installment2'];
+              $totalDue = $paymentData['total_per_driver'];
+              $percentPaid = ($totalDue > 0) ? ($totalPaid / $totalDue) * 100 : 0;
+              ?>
+              <div class="payment-card">
+                <div class="driver-name"><?php echo htmlspecialchars($name); ?></div>
+                <div class="driver-info"><?php echo htmlspecialchars($driver['role']); ?></div>
 
-              <div class="mt-4">
-                <h5>Payment Methods</h5>
-                <ul>
-                  <li>PayPal: <a href="mailto:hello@dazrave.uk" style="color: #8b241d;">hello@dazrave.uk</a></li>
-                  <li>Quick link: <a href="https://paypal.me/dazrave" target="_blank" style="color: #8b241d;">paypal.me/dazrave</a></li>
-                  <li>Bank: (ac) <strong>03039125</strong> / (s) <strong>04-00-04</strong></li>
-                  <li>Quick link: <a href="https://monzo.me/darrenravenscroft" target="_blank" style="color: #8b241d;">monzo.me/darrenravenscroft</a></li>
-                </ul>
-                <p class="mt-3"><small>After making a payment, contact the team to update your records.</small></p>
+                <div class="payment-status">
+                  <div class="payment-badge <?php echo $driver['deposit'] >= 200 ? 'paid' : ($driver['deposit'] > 0 ? 'partial' : 'unpaid'); ?>">
+                    Deposit: £<?php echo number_format($driver['deposit'], 0); ?>
+                  </div>
+                  <div class="payment-badge <?php echo $driver['installment1'] > 0 ? 'paid' : (strtotime($paymentData['deadlines']['installment1']) > time() ? 'pending' : 'unpaid'); ?>">
+                    Inst 1: £<?php echo number_format($driver['installment1'], 0); ?>
+                  </div>
+                  <div class="payment-badge <?php echo $driver['installment2'] > 0 ? 'paid' : (strtotime($paymentData['deadlines']['installment2']) > time() ? 'pending' : 'unpaid'); ?>">
+                    Inst 2: £<?php echo number_format($driver['installment2'], 0); ?>
+                  </div>
+                </div>
+
+                <div class="progress">
+                  <div class="progress-bar" role="progressbar" style="width: <?php echo $percentPaid; ?>%">
+                    £<?php echo number_format($totalPaid, 0); ?> / £<?php echo number_format($totalDue, 0); ?>
+                  </div>
+                </div>
               </div>
+            <?php endif; ?>
+          <?php endforeach; ?>
 
-              <a href="payments.php" class="btn btn-secondary mt-3">← Back to Selection</a>
-            </div>
-          <?php endif; ?>
+          <!-- Management Team -->
+          <div class="team-header">Management Team</div>
+          <?php foreach ($paymentData['drivers'] as $name => $driver): ?>
+            <?php if (isset($driver['team']) && $driver['team'] === 'Management'): ?>
+              <?php
+              $totalPaid = $driver['deposit'] + $driver['installment1'] + $driver['installment2'];
+              $totalDue = $paymentData['total_per_driver'];
+              $percentPaid = ($totalDue > 0) ? ($totalPaid / $totalDue) * 100 : 0;
+              ?>
+              <div class="payment-card">
+                <div class="driver-name"><?php echo htmlspecialchars($name); ?></div>
+                <div class="driver-info"><?php echo htmlspecialchars($driver['role']); ?></div>
+
+                <div class="payment-status">
+                  <div class="payment-badge <?php echo $driver['deposit'] >= 200 ? 'paid' : ($driver['deposit'] > 0 ? 'partial' : 'unpaid'); ?>">
+                    Deposit: £<?php echo number_format($driver['deposit'], 0); ?>
+                  </div>
+                  <div class="payment-badge <?php echo $driver['installment1'] > 0 ? 'paid' : (strtotime($paymentData['deadlines']['installment1']) > time() ? 'pending' : 'unpaid'); ?>">
+                    Inst 1: £<?php echo number_format($driver['installment1'], 0); ?>
+                  </div>
+                  <div class="payment-badge <?php echo $driver['installment2'] > 0 ? 'paid' : (strtotime($paymentData['deadlines']['installment2']) > time() ? 'pending' : 'unpaid'); ?>">
+                    Inst 2: £<?php echo number_format($driver['installment2'], 0); ?>
+                  </div>
+                </div>
+
+                <div class="progress">
+                  <div class="progress-bar" role="progressbar" style="width: <?php echo $percentPaid; ?>%">
+                    £<?php echo number_format($totalPaid, 0); ?> / £<?php echo number_format($totalDue, 0); ?>
+                  </div>
+                </div>
+              </div>
+            <?php endif; ?>
+          <?php endforeach; ?>
+
+          <!-- Payment Methods -->
+          <div class="payment-card mt-4">
+            <h5 style="color: #8b241d;">Payment Methods</h5>
+            <ul style="font-size: 0.9rem; margin-bottom: 0;">
+              <li>PayPal: <a href="mailto:hello@dazrave.uk" style="color: #8b241d;">hello@dazrave.uk</a></li>
+              <li>Quick link: <a href="https://paypal.me/dazrave" target="_blank" style="color: #8b241d;">paypal.me/dazrave</a></li>
+              <li>Bank: (ac) <strong>03039125</strong> / (s) <strong>04-00-04</strong></li>
+              <li>Quick link: <a href="https://monzo.me/darrenravenscroft" target="_blank" style="color: #8b241d;">monzo.me/darrenravenscroft</a></li>
+            </ul>
+          </div>
 
           <!-- Admin Login -->
-          <div class="payment-card mt-4">
-            <h5>Team Management</h5>
+          <div class="payment-card mt-3">
+            <h5 style="color: #8b241d;">Team Management</h5>
             <form method="POST">
               <div class="input-group">
-                <input type="password" name="passcode" class="form-control" placeholder="Enter admin passcode" required>
-                <button type="submit" name="admin_login" class="btn btn-primary">Admin Login</button>
+                <input type="password" name="passcode" class="form-control" placeholder="Admin passcode" required>
+                <button type="submit" name="admin_login" class="btn btn-primary">Login</button>
               </div>
             </form>
           </div>
@@ -330,55 +461,53 @@ $selectedDriver = isset($_POST['select_driver']) ? $_POST['driver_name'] : (isse
       <!-- ADMIN PANEL -->
       <div class="row">
         <div class="col-12">
-          <div class="d-flex justify-content-between align-items-center mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
             <h2>Admin Panel</h2>
-            <a href="?logout" class="btn btn-secondary">Logout</a>
+            <a href="?logout" class="btn btn-secondary btn-sm">Logout</a>
           </div>
 
           <!-- Deadlines and Settings -->
-          <div class="admin-panel mb-4">
-            <h4>Payment Deadlines & Settings</h4>
+          <div class="admin-panel mb-3">
+            <h4>Payment Settings</h4>
             <form method="POST" class="row g-3">
-              <div class="col-md-3">
-                <label class="form-label">Deposit Deadline</label>
-                <input type="date" name="deadline_deposit" class="form-control" value="<?php echo $paymentData['deadlines']['deposit']; ?>" required>
+              <div class="col-6 col-md-3">
+                <label class="form-label small">Deposit Deadline</label>
+                <input type="date" name="deadline_deposit" class="form-control form-control-sm" value="<?php echo $paymentData['deadlines']['deposit']; ?>" required>
               </div>
-              <div class="col-md-3">
-                <label class="form-label">Installment 1 Deadline</label>
-                <input type="date" name="deadline_installment1" class="form-control" value="<?php echo $paymentData['deadlines']['installment1']; ?>" required>
+              <div class="col-6 col-md-3">
+                <label class="form-label small">Installment 1</label>
+                <input type="date" name="deadline_installment1" class="form-control form-control-sm" value="<?php echo $paymentData['deadlines']['installment1']; ?>" required>
               </div>
-              <div class="col-md-3">
-                <label class="form-label">Installment 2 Deadline</label>
-                <input type="date" name="deadline_installment2" class="form-control" value="<?php echo $paymentData['deadlines']['installment2']; ?>" required>
+              <div class="col-6 col-md-3">
+                <label class="form-label small">Installment 2</label>
+                <input type="date" name="deadline_installment2" class="form-control form-control-sm" value="<?php echo $paymentData['deadlines']['installment2']; ?>" required>
               </div>
-              <div class="col-md-3">
-                <label class="form-label">Total Per Driver (£)</label>
-                <input type="number" name="total_per_driver" class="form-control" step="0.01" value="<?php echo $paymentData['total_per_driver']; ?>" required>
+              <div class="col-6 col-md-3">
+                <label class="form-label small">Total Per Driver (£)</label>
+                <input type="number" name="total_per_driver" class="form-control form-control-sm" step="0.01" value="<?php echo $paymentData['total_per_driver']; ?>" required>
               </div>
               <div class="col-12">
-                <button type="submit" name="update_deadlines" class="btn btn-primary">Update Settings</button>
+                <button type="submit" name="update_deadlines" class="btn btn-primary btn-sm">Update Settings</button>
               </div>
             </form>
           </div>
 
           <!-- Driver Payment Management -->
           <div class="admin-panel">
-            <h4 class="mb-4">Driver Payments</h4>
+            <h4 class="mb-3">Driver Payments</h4>
 
-            <!-- Summary Table -->
             <div class="table-responsive">
-              <table class="table table-dark table-hover">
+              <table class="table table-dark table-hover table-sm">
                 <thead>
                   <tr>
                     <th>Driver</th>
                     <th>Team</th>
-                    <th>Role</th>
                     <th>Deposit</th>
-                    <th>Installment 1</th>
-                    <th>Installment 2</th>
-                    <th>Total Paid</th>
+                    <th>Inst 1</th>
+                    <th>Inst 2</th>
+                    <th>Total</th>
                     <th>Outstanding</th>
-                    <th>Actions</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -390,13 +519,12 @@ $selectedDriver = isset($_POST['select_driver']) ? $_POST['driver_name'] : (isse
                     <tr>
                       <td><strong><?php echo htmlspecialchars($name); ?></strong></td>
                       <td><?php echo isset($driver['team']) ? htmlspecialchars($driver['team']) : '-'; ?></td>
-                      <td><?php echo htmlspecialchars($driver['role']); ?></td>
-                      <td>£<?php echo number_format($driver['deposit'], 2); ?></td>
-                      <td>£<?php echo number_format($driver['installment1'], 2); ?></td>
-                      <td>£<?php echo number_format($driver['installment2'], 2); ?></td>
-                      <td><strong>£<?php echo number_format($totalPaid, 2); ?></strong></td>
+                      <td>£<?php echo number_format($driver['deposit'], 0); ?></td>
+                      <td>£<?php echo number_format($driver['installment1'], 0); ?></td>
+                      <td>£<?php echo number_format($driver['installment2'], 0); ?></td>
+                      <td><strong>£<?php echo number_format($totalPaid, 0); ?></strong></td>
                       <td class="<?php echo $outstanding <= 0 ? 'paid' : 'unpaid'; ?>">
-                        £<?php echo number_format($outstanding, 2); ?>
+                        £<?php echo number_format($outstanding, 0); ?>
                       </td>
                       <td>
                         <button class="btn btn-sm btn-primary" onclick="editDriver('<?php echo htmlspecialchars($name); ?>')">Edit</button>
@@ -407,26 +535,26 @@ $selectedDriver = isset($_POST['select_driver']) ? $_POST['driver_name'] : (isse
               </table>
             </div>
 
-            <!-- Edit Form (Hidden by default) -->
-            <div id="editForm" style="display: none;" class="mt-4 p-3 border border-secondary rounded">
+            <!-- Edit Form -->
+            <div id="editForm" style="display: none;" class="mt-3 p-3 border border-secondary rounded">
               <h5>Edit Payment for <span id="editDriverName"></span></h5>
               <form method="POST" class="row g-3">
                 <input type="hidden" name="driver" id="editDriverInput">
-                <div class="col-md-4">
-                  <label class="form-label">Deposit (£)</label>
-                  <input type="number" name="deposit" id="editDeposit" class="form-control" step="0.01" min="0" required>
+                <div class="col-4">
+                  <label class="form-label small">Deposit (£)</label>
+                  <input type="number" name="deposit" id="editDeposit" class="form-control form-control-sm" step="0.01" min="0" required>
                 </div>
-                <div class="col-md-4">
-                  <label class="form-label">Installment 1 (£)</label>
-                  <input type="number" name="installment1" id="editInstallment1" class="form-control" step="0.01" min="0" required>
+                <div class="col-4">
+                  <label class="form-label small">Installment 1 (£)</label>
+                  <input type="number" name="installment1" id="editInstallment1" class="form-control form-control-sm" step="0.01" min="0" required>
                 </div>
-                <div class="col-md-4">
-                  <label class="form-label">Installment 2 (£)</label>
-                  <input type="number" name="installment2" id="editInstallment2" class="form-control" step="0.01" min="0" required>
+                <div class="col-4">
+                  <label class="form-label small">Installment 2 (£)</label>
+                  <input type="number" name="installment2" id="editInstallment2" class="form-control form-control-sm" step="0.01" min="0" required>
                 </div>
                 <div class="col-12">
-                  <button type="submit" name="update_payment" class="btn btn-success">Save Payment</button>
-                  <button type="button" class="btn btn-secondary" onclick="cancelEdit()">Cancel</button>
+                  <button type="submit" name="update_payment" class="btn btn-success btn-sm">Save</button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="cancelEdit()">Cancel</button>
                 </div>
               </form>
             </div>
@@ -454,7 +582,7 @@ $selectedDriver = isset($_POST['select_driver']) ? $_POST['driver_name'] : (isse
     <?php endif; ?>
   </div>
 
-  <footer class="bg-black text-center py-3 small" style="color: #ccc;">
+  <footer>
     <div class="container">
       &copy; Raven Motorsport 2025. <a href="/" style="color: #ccc; text-decoration: none;">Back to Home</a>
     </div>

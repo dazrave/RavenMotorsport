@@ -8,31 +8,47 @@ $dataFile = __DIR__ . '/payment_data.json';
 if (!file_exists($dataFile)) {
     $defaultData = [
         'drivers' => [
-            'Tim Hockham' => ['deposit' => 0, 'installment1' => 0, 'installment2' => 0, 'role' => 'Race Manager', 'team' => 'Management'],
-            'Adrian Herrero Sanchez' => ['deposit' => 0, 'installment1' => 0, 'installment2' => 0, 'role' => 'Race Manager', 'team' => 'Management'],
-            'Darren Ravenscroft' => ['deposit' => 200, 'installment1' => 0, 'installment2' => 0, 'role' => 'Team Principal & Driver', 'team' => 'Alpha'],
-            'Andy Tait' => ['deposit' => 200, 'installment1' => 0, 'installment2' => 0, 'role' => 'Driver', 'team' => 'Alpha'],
-            'Matt Casey' => ['deposit' => 200, 'installment1' => 0, 'installment2' => 0, 'role' => 'Driver', 'team' => 'Alpha'],
-            'Dave Parker' => ['deposit' => 200, 'installment1' => 0, 'installment2' => 0, 'role' => 'Driver', 'team' => 'Alpha'],
-            'Tomek Zet' => ['deposit' => 200, 'installment1' => 0, 'installment2' => 0, 'role' => 'Driver', 'team' => 'Alpha'],
-            'Ryan Welch' => ['deposit' => 200, 'installment1' => 0, 'installment2' => 0, 'role' => 'Driver', 'team' => 'Bravo'],
-            'Luke Gore' => ['deposit' => 200, 'installment1' => 0, 'installment2' => 0, 'role' => 'Driver', 'team' => 'Bravo'],
-            'James Eaton' => ['deposit' => 100, 'installment1' => 0, 'installment2' => 0, 'role' => 'Driver', 'team' => 'Bravo'],
-            'James Addison' => ['deposit' => 200, 'installment1' => 0, 'installment2' => 0, 'role' => 'Driver', 'team' => 'Bravo'],
-            'Daniel Lane' => ['deposit' => 200, 'installment1' => 0, 'installment2' => 0, 'role' => 'Driver', 'team' => 'Bravo']
+            'Tim Hockham' => ['deposit' => 0, 'team_kit' => 0, 'installment1' => 0, 'installment2' => 0, 'role' => 'Race Manager', 'team' => 'Management', 'is_driver' => false],
+            'Adrian Herrero Sanchez' => ['deposit' => 0, 'team_kit' => 0, 'installment1' => 0, 'installment2' => 0, 'role' => 'Race Manager', 'team' => 'Management', 'is_driver' => false],
+            'Darren Ravenscroft' => ['deposit' => 200, 'team_kit' => 0, 'installment1' => 0, 'installment2' => 0, 'role' => 'Team Principal & Driver', 'team' => 'Alpha', 'is_driver' => true],
+            'Andy Tait' => ['deposit' => 200, 'team_kit' => 0, 'installment1' => 0, 'installment2' => 0, 'role' => 'Driver', 'team' => 'Alpha', 'is_driver' => true],
+            'Matt Casey' => ['deposit' => 200, 'team_kit' => 0, 'installment1' => 0, 'installment2' => 0, 'role' => 'Driver', 'team' => 'Alpha', 'is_driver' => true],
+            'Dave Parker' => ['deposit' => 200, 'team_kit' => 0, 'installment1' => 0, 'installment2' => 0, 'role' => 'Driver', 'team' => 'Alpha', 'is_driver' => true],
+            'Tomek Zet' => ['deposit' => 200, 'team_kit' => 0, 'installment1' => 0, 'installment2' => 0, 'role' => 'Driver', 'team' => 'Alpha', 'is_driver' => true],
+            'Ryan Welch' => ['deposit' => 200, 'team_kit' => 0, 'installment1' => 0, 'installment2' => 0, 'role' => 'Driver', 'team' => 'Bravo', 'is_driver' => true],
+            'Luke Gore' => ['deposit' => 200, 'team_kit' => 0, 'installment1' => 0, 'installment2' => 0, 'role' => 'Driver', 'team' => 'Bravo', 'is_driver' => true],
+            'James Eaton' => ['deposit' => 100, 'team_kit' => 0, 'installment1' => 0, 'installment2' => 0, 'role' => 'Driver', 'team' => 'Bravo', 'is_driver' => true],
+            'James Addison' => ['deposit' => 200, 'team_kit' => 0, 'installment1' => 0, 'installment2' => 0, 'role' => 'Driver', 'team' => 'Bravo', 'is_driver' => true],
+            'Daniel Lane' => ['deposit' => 200, 'team_kit' => 0, 'installment1' => 0, 'installment2' => 0, 'role' => 'Driver', 'team' => 'Bravo', 'is_driver' => true]
         ],
         'deadlines' => [
             'deposit' => '2026-01-01',
             'installment1' => '2026-02-01',
             'installment2' => '2026-03-01'
         ],
-        'total_per_driver' => 670
+        'total_per_driver' => 670,
+        'team_kit_fee' => 0
     ];
     file_put_contents($dataFile, json_encode($defaultData, JSON_PRETTY_PRINT));
 }
 
 // Load payment data
 $paymentData = json_decode(file_get_contents($dataFile), true);
+
+// Ensure team_kit_fee exists in loaded data (for backwards compatibility)
+if (!isset($paymentData['team_kit_fee'])) {
+    $paymentData['team_kit_fee'] = 0;
+}
+
+// Ensure all drivers have team_kit and is_driver fields (backwards compatibility)
+foreach ($paymentData['drivers'] as $name => &$driver) {
+    if (!isset($driver['team_kit'])) {
+        $driver['team_kit'] = 0;
+    }
+    if (!isset($driver['is_driver'])) {
+        $driver['is_driver'] = ($driver['team'] !== 'Management');
+    }
+}
 
 // Handle admin login
 if (isset($_POST['admin_login'])) {
@@ -55,6 +71,7 @@ if (isset($_POST['update_payment']) && isset($_SESSION['admin'])) {
     $driver = $_POST['driver'];
     if (isset($paymentData['drivers'][$driver])) {
         $paymentData['drivers'][$driver]['deposit'] = floatval($_POST['deposit']);
+        $paymentData['drivers'][$driver]['team_kit'] = floatval($_POST['team_kit']);
         $paymentData['drivers'][$driver]['installment1'] = floatval($_POST['installment1']);
         $paymentData['drivers'][$driver]['installment2'] = floatval($_POST['installment2']);
         file_put_contents($dataFile, json_encode($paymentData, JSON_PRETTY_PRINT));
@@ -68,17 +85,20 @@ if (isset($_POST['update_deadlines']) && isset($_SESSION['admin'])) {
     $paymentData['deadlines']['installment1'] = $_POST['deadline_installment1'];
     $paymentData['deadlines']['installment2'] = $_POST['deadline_installment2'];
     $paymentData['total_per_driver'] = floatval($_POST['total_per_driver']);
+    $paymentData['team_kit_fee'] = floatval($_POST['team_kit_fee']);
     file_put_contents($dataFile, json_encode($paymentData, JSON_PRETTY_PRINT));
-    $success = "Deadlines and total updated";
+    $success = "Settings updated successfully";
 }
 
 // Calculate totals
 $totalCollected = 0;
 $totalOutstanding = 0;
 foreach ($paymentData['drivers'] as $driver) {
-    $paid = $driver['deposit'] + $driver['installment1'] + $driver['installment2'];
+    $paid = $driver['deposit'] + $driver['team_kit'] + $driver['installment1'] + $driver['installment2'];
     $totalCollected += $paid;
-    $totalOutstanding += ($paymentData['total_per_driver'] - $paid);
+    // For drivers, add team kit fee to total expected
+    $expected = $driver['is_driver'] ? ($paymentData['total_per_driver'] + $paymentData['team_kit_fee']) : 0;
+    $totalOutstanding += ($expected - $paid);
 }
 
 ?>
@@ -140,7 +160,7 @@ foreach ($paymentData['drivers'] as $driver) {
       font-size: 0.8rem;
       font-weight: bold;
       flex: 1;
-      min-width: 80px;
+      min-width: 70px;
       text-align: center;
     }
     .paid {
@@ -259,7 +279,7 @@ foreach ($paymentData['drivers'] as $driver) {
       .payment-badge {
         font-size: 0.7rem;
         padding: 0.2rem 0.4rem;
-        min-width: 70px;
+        min-width: 60px;
       }
       .driver-name {
         font-size: 1rem;
@@ -304,6 +324,11 @@ foreach ($paymentData['drivers'] as $driver) {
             <div class="deadline-item">
               <strong>Deposit (£200):</strong> Due <?php echo date('d M Y', strtotime($paymentData['deadlines']['deposit'])); ?>
             </div>
+            <?php if ($paymentData['team_kit_fee'] > 0): ?>
+            <div class="deadline-item">
+              <strong>Team Kit (£<?php echo number_format($paymentData['team_kit_fee'], 0); ?>):</strong> Optional add-on
+            </div>
+            <?php endif; ?>
             <div class="deadline-item">
               <strong>Installment 1:</strong> Due <?php echo date('d M Y', strtotime($paymentData['deadlines']['installment1'])); ?>
             </div>
@@ -311,7 +336,10 @@ foreach ($paymentData['drivers'] as $driver) {
               <strong>Installment 2:</strong> Due <?php echo date('d M Y', strtotime($paymentData['deadlines']['installment2'])); ?>
             </div>
             <div class="mt-3" style="font-size: 0.85rem; opacity: 0.9;">
-              Total per driver: <strong>£<?php echo number_format($paymentData['total_per_driver'], 2); ?></strong>
+              Total per driver: <strong>£<?php echo number_format($paymentData['total_per_driver'], 0); ?></strong>
+              <?php if ($paymentData['team_kit_fee'] > 0): ?>
+                + Team Kit: <strong>£<?php echo number_format($paymentData['team_kit_fee'], 0); ?></strong>
+              <?php endif; ?>
             </div>
           </div>
 
@@ -319,13 +347,13 @@ foreach ($paymentData['drivers'] as $driver) {
           <div class="row mb-3">
             <div class="col-6 col-md-6">
               <div class="summary-card">
-                <div class="summary-amount">£<?php echo number_format($totalCollected, 2); ?></div>
+                <div class="summary-amount">£<?php echo number_format($totalCollected, 0); ?></div>
                 <div style="font-size: 0.85rem; color: #aaa;">Total Collected</div>
               </div>
             </div>
             <div class="col-6 col-md-6">
               <div class="summary-card">
-                <div class="summary-amount">£<?php echo number_format($totalOutstanding, 2); ?></div>
+                <div class="summary-amount">£<?php echo number_format($totalOutstanding, 0); ?></div>
                 <div style="font-size: 0.85rem; color: #aaa;">Outstanding</div>
               </div>
             </div>
@@ -334,10 +362,10 @@ foreach ($paymentData['drivers'] as $driver) {
           <!-- Alpha Team -->
           <div class="team-header">Alpha Team</div>
           <?php foreach ($paymentData['drivers'] as $name => $driver): ?>
-            <?php if (isset($driver['team']) && $driver['team'] === 'Alpha'): ?>
+            <?php if (isset($driver['team']) && $driver['team'] === 'Alpha' && $driver['is_driver']): ?>
               <?php
-              $totalPaid = $driver['deposit'] + $driver['installment1'] + $driver['installment2'];
-              $totalDue = $paymentData['total_per_driver'];
+              $totalPaid = $driver['deposit'] + $driver['team_kit'] + $driver['installment1'] + $driver['installment2'];
+              $totalDue = $paymentData['total_per_driver'] + $paymentData['team_kit_fee'];
               $percentPaid = ($totalDue > 0) ? ($totalPaid / $totalDue) * 100 : 0;
               ?>
               <div class="payment-card">
@@ -346,8 +374,13 @@ foreach ($paymentData['drivers'] as $driver) {
 
                 <div class="payment-status">
                   <div class="payment-badge <?php echo $driver['deposit'] >= 200 ? 'paid' : ($driver['deposit'] > 0 ? 'partial' : 'unpaid'); ?>">
-                    Deposit: £<?php echo number_format($driver['deposit'], 0); ?>
+                    Dep: £<?php echo number_format($driver['deposit'], 0); ?>
                   </div>
+                  <?php if ($paymentData['team_kit_fee'] > 0): ?>
+                  <div class="payment-badge <?php echo $driver['team_kit'] >= $paymentData['team_kit_fee'] ? 'paid' : ($driver['team_kit'] > 0 ? 'partial' : 'pending'); ?>">
+                    Kit: £<?php echo number_format($driver['team_kit'], 0); ?>
+                  </div>
+                  <?php endif; ?>
                   <div class="payment-badge <?php echo $driver['installment1'] > 0 ? 'paid' : (strtotime($paymentData['deadlines']['installment1']) > time() ? 'pending' : 'unpaid'); ?>">
                     Inst 1: £<?php echo number_format($driver['installment1'], 0); ?>
                   </div>
@@ -368,10 +401,10 @@ foreach ($paymentData['drivers'] as $driver) {
           <!-- Bravo Team -->
           <div class="team-header">Bravo Team</div>
           <?php foreach ($paymentData['drivers'] as $name => $driver): ?>
-            <?php if (isset($driver['team']) && $driver['team'] === 'Bravo'): ?>
+            <?php if (isset($driver['team']) && $driver['team'] === 'Bravo' && $driver['is_driver']): ?>
               <?php
-              $totalPaid = $driver['deposit'] + $driver['installment1'] + $driver['installment2'];
-              $totalDue = $paymentData['total_per_driver'];
+              $totalPaid = $driver['deposit'] + $driver['team_kit'] + $driver['installment1'] + $driver['installment2'];
+              $totalDue = $paymentData['total_per_driver'] + $paymentData['team_kit_fee'];
               $percentPaid = ($totalDue > 0) ? ($totalPaid / $totalDue) * 100 : 0;
               ?>
               <div class="payment-card">
@@ -380,8 +413,13 @@ foreach ($paymentData['drivers'] as $driver) {
 
                 <div class="payment-status">
                   <div class="payment-badge <?php echo $driver['deposit'] >= 200 ? 'paid' : ($driver['deposit'] > 0 ? 'partial' : 'unpaid'); ?>">
-                    Deposit: £<?php echo number_format($driver['deposit'], 0); ?>
+                    Dep: £<?php echo number_format($driver['deposit'], 0); ?>
                   </div>
+                  <?php if ($paymentData['team_kit_fee'] > 0): ?>
+                  <div class="payment-badge <?php echo $driver['team_kit'] >= $paymentData['team_kit_fee'] ? 'paid' : ($driver['team_kit'] > 0 ? 'partial' : 'pending'); ?>">
+                    Kit: £<?php echo number_format($driver['team_kit'], 0); ?>
+                  </div>
+                  <?php endif; ?>
                   <div class="payment-badge <?php echo $driver['installment1'] > 0 ? 'paid' : (strtotime($paymentData['deadlines']['installment1']) > time() ? 'pending' : 'unpaid'); ?>">
                     Inst 1: £<?php echo number_format($driver['installment1'], 0); ?>
                   </div>
@@ -391,7 +429,7 @@ foreach ($paymentData['drivers'] as $driver) {
                 </div>
 
                 <div class="progress">
-                  <div class="progress-bar" role="progressbar" style="width: <?php echo $percentPaid; ?>%">
+                  <div class="progress-bar" role="progressbar" style="width: <?php echo $percentPaid; %>%">
                     £<?php echo number_format($totalPaid, 0); ?> / £<?php echo number_format($totalDue, 0); ?>
                   </div>
                 </div>
@@ -400,35 +438,32 @@ foreach ($paymentData['drivers'] as $driver) {
           <?php endforeach; ?>
 
           <!-- Management Team -->
-          <div class="team-header">Management Team</div>
+          <div class="team-header">Management & Support</div>
           <?php foreach ($paymentData['drivers'] as $name => $driver): ?>
-            <?php if (isset($driver['team']) && $driver['team'] === 'Management'): ?>
+            <?php if (!$driver['is_driver']): ?>
               <?php
-              $totalPaid = $driver['deposit'] + $driver['installment1'] + $driver['installment2'];
-              $totalDue = $paymentData['total_per_driver'];
-              $percentPaid = ($totalDue > 0) ? ($totalPaid / $totalDue) * 100 : 0;
+              $totalPaid = $driver['deposit'] + $driver['team_kit'];
               ?>
               <div class="payment-card">
                 <div class="driver-name"><?php echo htmlspecialchars($name); ?></div>
                 <div class="driver-info"><?php echo htmlspecialchars($driver['role']); ?></div>
 
                 <div class="payment-status">
-                  <div class="payment-badge <?php echo $driver['deposit'] >= 200 ? 'paid' : ($driver['deposit'] > 0 ? 'partial' : 'unpaid'); ?>">
+                  <div class="payment-badge <?php echo $driver['deposit'] > 0 ? 'paid' : 'pending'; ?>">
                     Deposit: £<?php echo number_format($driver['deposit'], 0); ?>
                   </div>
-                  <div class="payment-badge <?php echo $driver['installment1'] > 0 ? 'paid' : (strtotime($paymentData['deadlines']['installment1']) > time() ? 'pending' : 'unpaid'); ?>">
-                    Inst 1: £<?php echo number_format($driver['installment1'], 0); ?>
+                  <?php if ($paymentData['team_kit_fee'] > 0): ?>
+                  <div class="payment-badge <?php echo $driver['team_kit'] >= $paymentData['team_kit_fee'] ? 'paid' : ($driver['team_kit'] > 0 ? 'partial' : 'pending'); ?>">
+                    Team Kit: £<?php echo number_format($driver['team_kit'], 0); ?>
                   </div>
-                  <div class="payment-badge <?php echo $driver['installment2'] > 0 ? 'paid' : (strtotime($paymentData['deadlines']['installment2']) > time() ? 'pending' : 'unpaid'); ?>">
-                    Inst 2: £<?php echo number_format($driver['installment2'], 0); ?>
-                  </div>
+                  <?php endif; ?>
                 </div>
 
-                <div class="progress">
-                  <div class="progress-bar" role="progressbar" style="width: <?php echo $percentPaid; ?>%">
-                    £<?php echo number_format($totalPaid, 0); ?> / £<?php echo number_format($totalDue, 0); ?>
-                  </div>
+                <?php if ($totalPaid > 0): ?>
+                <div class="mt-2" style="font-size: 0.85rem; color: #aaa;">
+                  Total Paid: £<?php echo number_format($totalPaid, 0); ?>
                 </div>
+                <?php endif; ?>
               </div>
             <?php endif; ?>
           <?php endforeach; ?>
@@ -470,21 +505,25 @@ foreach ($paymentData['drivers'] as $driver) {
           <div class="admin-panel mb-3">
             <h4>Payment Settings</h4>
             <form method="POST" class="row g-3">
-              <div class="col-6 col-md-3">
+              <div class="col-6 col-md-2">
                 <label class="form-label small">Deposit Deadline</label>
                 <input type="date" name="deadline_deposit" class="form-control form-control-sm" value="<?php echo $paymentData['deadlines']['deposit']; ?>" required>
               </div>
-              <div class="col-6 col-md-3">
+              <div class="col-6 col-md-2">
                 <label class="form-label small">Installment 1</label>
                 <input type="date" name="deadline_installment1" class="form-control form-control-sm" value="<?php echo $paymentData['deadlines']['installment1']; ?>" required>
               </div>
-              <div class="col-6 col-md-3">
+              <div class="col-6 col-md-2">
                 <label class="form-label small">Installment 2</label>
                 <input type="date" name="deadline_installment2" class="form-control form-control-sm" value="<?php echo $paymentData['deadlines']['installment2']; ?>" required>
               </div>
               <div class="col-6 col-md-3">
-                <label class="form-label small">Total Per Driver (£)</label>
+                <label class="form-label small">Entry Fee Per Driver (£)</label>
                 <input type="number" name="total_per_driver" class="form-control form-control-sm" step="0.01" value="<?php echo $paymentData['total_per_driver']; ?>" required>
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label small">Team Kit Fee (£)</label>
+                <input type="number" name="team_kit_fee" class="form-control form-control-sm" step="0.01" value="<?php echo $paymentData['team_kit_fee']; ?>" required>
               </div>
               <div class="col-12">
                 <button type="submit" name="update_deadlines" class="btn btn-primary btn-sm">Update Settings</button>
@@ -503,6 +542,7 @@ foreach ($paymentData['drivers'] as $driver) {
                     <th>Driver</th>
                     <th>Team</th>
                     <th>Deposit</th>
+                    <th>Team Kit</th>
                     <th>Inst 1</th>
                     <th>Inst 2</th>
                     <th>Total</th>
@@ -513,18 +553,24 @@ foreach ($paymentData['drivers'] as $driver) {
                 <tbody>
                   <?php foreach ($paymentData['drivers'] as $name => $driver): ?>
                     <?php
-                    $totalPaid = $driver['deposit'] + $driver['installment1'] + $driver['installment2'];
-                    $outstanding = $paymentData['total_per_driver'] - $totalPaid;
+                    $totalPaid = $driver['deposit'] + $driver['team_kit'] + $driver['installment1'] + $driver['installment2'];
+                    $expected = $driver['is_driver'] ? ($paymentData['total_per_driver'] + $paymentData['team_kit_fee']) : 0;
+                    $outstanding = $expected - $totalPaid;
                     ?>
                     <tr>
                       <td><strong><?php echo htmlspecialchars($name); ?></strong></td>
                       <td><?php echo isset($driver['team']) ? htmlspecialchars($driver['team']) : '-'; ?></td>
                       <td>£<?php echo number_format($driver['deposit'], 0); ?></td>
+                      <td>£<?php echo number_format($driver['team_kit'], 0); ?></td>
                       <td>£<?php echo number_format($driver['installment1'], 0); ?></td>
                       <td>£<?php echo number_format($driver['installment2'], 0); ?></td>
                       <td><strong>£<?php echo number_format($totalPaid, 0); ?></strong></td>
                       <td class="<?php echo $outstanding <= 0 ? 'paid' : 'unpaid'; ?>">
-                        £<?php echo number_format($outstanding, 0); ?>
+                        <?php if ($driver['is_driver']): ?>
+                          £<?php echo number_format($outstanding, 0); ?>
+                        <?php else: ?>
+                          <span style="color: #aaa;">-</span>
+                        <?php endif; ?>
                       </td>
                       <td>
                         <button class="btn btn-sm btn-primary" onclick="editDriver('<?php echo htmlspecialchars($name); ?>')">Edit</button>
@@ -540,15 +586,19 @@ foreach ($paymentData['drivers'] as $driver) {
               <h5>Edit Payment for <span id="editDriverName"></span></h5>
               <form method="POST" class="row g-3">
                 <input type="hidden" name="driver" id="editDriverInput">
-                <div class="col-4">
+                <div class="col-3">
                   <label class="form-label small">Deposit (£)</label>
                   <input type="number" name="deposit" id="editDeposit" class="form-control form-control-sm" step="0.01" min="0" required>
                 </div>
-                <div class="col-4">
+                <div class="col-3">
+                  <label class="form-label small">Team Kit (£)</label>
+                  <input type="number" name="team_kit" id="editTeamKit" class="form-control form-control-sm" step="0.01" min="0" required>
+                </div>
+                <div class="col-3">
                   <label class="form-label small">Installment 1 (£)</label>
                   <input type="number" name="installment1" id="editInstallment1" class="form-control form-control-sm" step="0.01" min="0" required>
                 </div>
-                <div class="col-4">
+                <div class="col-3">
                   <label class="form-label small">Installment 2 (£)</label>
                   <input type="number" name="installment2" id="editInstallment2" class="form-control form-control-sm" step="0.01" min="0" required>
                 </div>
@@ -570,6 +620,7 @@ foreach ($paymentData['drivers'] as $driver) {
           document.getElementById('editDriverName').textContent = name;
           document.getElementById('editDriverInput').value = name;
           document.getElementById('editDeposit').value = drivers[name].deposit;
+          document.getElementById('editTeamKit').value = drivers[name].team_kit;
           document.getElementById('editInstallment1').value = drivers[name].installment1;
           document.getElementById('editInstallment2').value = drivers[name].installment2;
           document.getElementById('editForm').scrollIntoView({ behavior: 'smooth' });

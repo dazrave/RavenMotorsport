@@ -256,6 +256,17 @@ function getPaymentTotal($db, $driverId, $installmentId) {
     return $total ?: 0;
 }
 
+// Abbreviate first name for mobile view
+function abbreviateName($fullName) {
+    $parts = explode(' ', trim($fullName));
+    if (count($parts) > 1) {
+        $firstName = $parts[0];
+        $rest = array_slice($parts, 1);
+        return substr($firstName, 0, 1) . '. ' . implode(' ', $rest);
+    }
+    return $fullName;
+}
+
 // Get total collected and outstanding
 $totalCollected = $db->querySingle("SELECT SUM(amount) FROM payments") ?: 0;
 $totalPerDriver = floatval($db->querySingle("SELECT value FROM settings WHERE key='total_per_driver'") ?: 670);
@@ -434,6 +445,14 @@ if (isset($_SESSION['admin'])) {
       color: #fff;
     }
 
+    /* Name display - desktop shows full, mobile shows abbreviated */
+    .driver-name-full {
+      display: inline;
+    }
+    .driver-name-abbrev {
+      display: none;
+    }
+
     /* Mobile responsive */
     @media (max-width: 768px) {
       table {
@@ -447,6 +466,13 @@ if (isset($_SESSION['admin'])) {
       }
       header img {
         max-width: 150px;
+      }
+      /* Show abbreviated names on mobile */
+      .driver-name-full {
+        display: none;
+      }
+      .driver-name-abbrev {
+        display: inline;
       }
     }
   </style>
@@ -523,7 +549,12 @@ if (isset($_SESSION['admin'])) {
                   $outstanding = ($totalPerDriver + $teamKitFee) - $totalPaid;
                   ?>
                   <tr>
-                    <td><strong><?php echo htmlspecialchars($driver['name']); ?></strong></td>
+                    <td>
+                      <strong>
+                        <span class="driver-name-full"><?php echo htmlspecialchars($driver['name']); ?></span>
+                        <span class="driver-name-abbrev"><?php echo htmlspecialchars(abbreviateName($driver['name'])); ?></span>
+                      </strong>
+                    </td>
                     <?php foreach ($installments as $inst): ?>
                       <?php
                       $paid = getPaymentTotal($db, $driver['id'], $inst['id']);
@@ -577,7 +608,12 @@ if (isset($_SESSION['admin'])) {
                   $outstanding = ($totalPerDriver + $teamKitFee) - $totalPaid;
                   ?>
                   <tr>
-                    <td><strong><?php echo htmlspecialchars($driver['name']); ?></strong></td>
+                    <td>
+                      <strong>
+                        <span class="driver-name-full"><?php echo htmlspecialchars($driver['name']); ?></span>
+                        <span class="driver-name-abbrev"><?php echo htmlspecialchars(abbreviateName($driver['name'])); ?></span>
+                      </strong>
+                    </td>
                     <?php foreach ($installments as $inst): ?>
                       <?php
                       $paid = getPaymentTotal($db, $driver['id'], $inst['id']);
@@ -640,7 +676,12 @@ if (isset($_SESSION['admin'])) {
                   }
                   ?>
                   <tr>
-                    <td><strong><?php echo htmlspecialchars($driver['name']); ?></strong></td>
+                    <td>
+                      <strong>
+                        <span class="driver-name-full"><?php echo htmlspecialchars($driver['name']); ?></span>
+                        <span class="driver-name-abbrev"><?php echo htmlspecialchars(abbreviateName($driver['name'])); ?></span>
+                      </strong>
+                    </td>
                     <td><?php echo htmlspecialchars($driver['role']); ?></td>
                     <?php foreach ($installments as $inst): ?>
                       <?php $paid = getPaymentTotal($db, $driver['id'], $inst['id']); ?>

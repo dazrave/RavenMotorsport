@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS installments (
     due_date TEXT,
     amount_per_driver REAL DEFAULT 0,
     display_order INTEGER DEFAULT 0,
+    visible INTEGER DEFAULT 1,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -49,6 +50,19 @@ CREATE TABLE IF NOT EXISTS settings (
     value TEXT
 );
 ");
+
+// Add visible column to installments if it doesn't exist (migration for existing databases)
+$columns = $db->query("PRAGMA table_info(installments)");
+$hasVisible = false;
+while ($col = $columns->fetchArray(SQLITE3_ASSOC)) {
+    if ($col['name'] === 'visible') {
+        $hasVisible = true;
+        break;
+    }
+}
+if (!$hasVisible) {
+    $db->exec("ALTER TABLE installments ADD COLUMN visible INTEGER DEFAULT 1");
+}
 
 // Initialize default data if tables are empty
 $teamCount = $db->querySingle("SELECT COUNT(*) FROM teams");
@@ -163,6 +177,16 @@ if (isset($_SESSION['admin'])) {
             $db->exec("DELETE FROM installments WHERE id=$id");
             $success = "Installment deleted successfully";
         }
+    }
+
+    // Toggle installment visibility
+    if (isset($_POST['toggle_visibility'])) {
+        $id = intval($_POST['installment_id']);
+        $currentVisibility = $db->querySingle("SELECT visible FROM installments WHERE id=$id");
+        $newVisibility = $currentVisibility ? 0 : 1;
+        $db->exec("UPDATE installments SET visible=$newVisibility WHERE id=$id");
+        $installmentName = $db->querySingle("SELECT name FROM installments WHERE id=$id");
+        $success = $installmentName . " is now " . ($newVisibility ? "visible" : "hidden") . " on the payment schedule";
     }
 
     // Log payment
@@ -584,7 +608,7 @@ if (isset($_SESSION['admin'])) {
         <h4>Payment Schedule</h4>
         <div class="deadline-grid">
           <?php foreach ($installments as $inst): ?>
-            <?php if ($inst['amount_per_driver'] > 0): ?>
+            <?php if ($inst['amount_per_driver'] > 0 && $inst['visible']): ?>
             <?php
             $daysRemaining = daysToDeadline($inst['due_date']);
             $urgencyClass = getUrgencyClass($daysRemaining);
@@ -881,7 +905,12 @@ if (isset($_SESSION['admin'])) {
                 $daysMessage = formatDaysRemaining($daysRemaining);
                 ?>
                 <tr>
-                  <td><strong><?php echo htmlspecialchars($inst['name']); ?></strong></td>
+                  <td>
+                    <strong><?php echo htmlspecialchars($inst['name']); ?></strong>
+                    <?php if (!$inst['visible']): ?>
+                      <span class="badge bg-secondary" style="font-size: 0.7rem; margin-left: 0.5rem;">Hidden</span>
+                    <?php endif; ?>
+                  </td>
                   <td><?php echo $inst['due_date'] ? date('d M Y', strtotime($inst['due_date'])) : 'TBD'; ?></td>
                   <td>
                     <?php if ($daysMessage): ?>
@@ -895,6 +924,12 @@ if (isset($_SESSION['admin'])) {
                   <td class="text-center">£<?php echo number_format($bravoTotal, 2); ?></td>
                   <td class="text-center"><strong>£<?php echo number_format($instTotal, 2); ?></strong></td>
                   <td class="text-end">
+                    <form method="POST" style="display:inline;">
+                      <input type="hidden" name="installment_id" value="<?php echo $inst['id']; ?>">
+                      <button type="submit" name="toggle_visibility" class="btn btn-sm <?php echo $inst['visible'] ? 'btn-warning' : 'btn-success'; ?>">
+                        <?php echo $inst['visible'] ? 'Hide' : 'Show'; ?>
+                      </button>
+                    </form>
                     <button class="btn btn-sm btn-primary" onclick="editInstallment(<?php echo $inst['id']; ?>)">Edit</button>
                     <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this installment?');">
                       <input type="hidden" name="installment_id" value="<?php echo $inst['id']; ?>">

@@ -62,7 +62,7 @@ if (isset($_POST['admin_login'])) {
 // Handle admin logout
 if (isset($_GET['logout'])) {
     unset($_SESSION['admin']);
-    header('Location: payments.php');
+    header('Location: /payments');
     exit;
 }
 

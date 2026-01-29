@@ -142,7 +142,7 @@
         <strong>1 February</strong> and <strong>1 March</strong>.
       </p>
       <p class="text-center mt-3">
-        <a href="/payments.php" class="btn btn-outline-light" style="background: #8b241d; border-color: #8b241d;">
+        <a href="/payments" class="btn btn-outline-light" style="background: #8b241d; border-color: #8b241d;">
           View Payment Tracker
         </a>
       </p>

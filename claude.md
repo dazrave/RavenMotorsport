@@ -51,6 +51,11 @@ sshpass -p 'EqualPurpleMouse' ssh -o StrictHostKeyChecking=no root@192.168.0.23 
 - Managers have separate section with no installment requirements
 - Fully mobile responsive with abbreviated names on mobile (e.g., "D. Ravenscroft" instead of "Darren Ravenscroft")
 - Payment methods displayed at the top of the page
+- **Days to Go urgency indicator**: Each payment deadline shows days remaining with color-coded urgency:
+  - Red: Overdue (creates pressure to pay immediately)
+  - Orange: 7 days or less (urgent)
+  - Yellow: 8-14 days (coming soon)
+  - Green: 15+ days (on track)
 
 ### Admin Features
 - **Dynamic Installment Management**:
@@ -59,6 +64,7 @@ sshpass -p 'EqualPurpleMouse' ssh -o StrictHostKeyChecking=no root@192.168.0.23 
   - Delete installments (only if no payments have been made)
   - View total collected per team per installment
   - See what's left to collect for each installment
+  - Days remaining shown for each installment with urgency indicators
 - **Team Entry Costs**: Configure Alpha and Bravo team entry costs separately
 - **Payment Logging System**: Log individual payments as they come in
   - Select driver, installment, and amount

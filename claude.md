@@ -49,7 +49,7 @@ sshpass -p 'EqualPurpleMouse' ssh -o StrictHostKeyChecking=no root@192.168.0.23 
 - Simple color scheme: Green checkmarks (✓) for paid, yellow amounts for partial, gray (-) for unpaid
 - Drivers grouped by team (Alpha, Bravo, Management)
 - Managers have separate section with no installment requirements
-- Fully mobile responsive
+- Fully mobile responsive with abbreviated names on mobile (e.g., "D. Ravenscroft" instead of "Darren Ravenscroft")
 - Payment methods displayed at the top of the page
 
 ### Admin Features

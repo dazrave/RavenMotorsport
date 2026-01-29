@@ -150,6 +150,9 @@ foreach ($paymentData['drivers'] as $driver) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Payment Tracker | Raven Motorsport</title>
+  <meta name="description" content="Track driver payments for Raven Motorsport's 2026 Daytona 24 Hours entry. View payment status and deadlines.">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="canonical" href="https://ravenmotorsport.com/payments">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body {

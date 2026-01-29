@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Raven Motorsport | Team Info 2026</title>
   <meta name="description" content="Team information for Raven Motorsport drivers competing in the Daytona 24 Hours 2026. Key dates, hotel details, strategy, and weekend plan.">
+  <meta property="og:title" content="2026 Race Info | Raven Motorsport">
+  <meta property="og:description" content="Daytona 24 Hours 2026 race information, payment schedule, and team details for Raven Motorsport drivers.">
+  <meta property="og:url" content="https://ravenmotorsport.com/info">
+  <link rel="canonical" href="https://ravenmotorsport.com/info">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
   <style>
@@ -295,7 +299,7 @@
     <img src="https://res.cloudinary.com/dazrave/image/upload/e_grayscale/v1747483159/192805442_3960694670712677_4965092832512142571_n_h3fksh.jpg" alt="Raven Motorsport Footer" class="img-fluid" style="max-width:1600px;width:100%;">
   </section>
   <footer>
-    &copy; Raven Motorsport 2025. All rights reserved. <a href="https://ravenmotorsport.com">ravenmotorsport.com</a>
+    &copy; Raven Motorsport 2026. All rights reserved. <a href="/">Home</a> | <a href="/info">Race Info</a>
   </footer>
 
   <script>

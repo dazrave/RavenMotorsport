@@ -12,7 +12,20 @@
   <meta property="og:image" content="https://res.cloudinary.com/dazrave/image/upload/e_grayscale/v1747483159/192805442_3960694670712677_4965092832512142571_n_h3fksh.jpg">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://ravenmotorsport.com">
+  <link rel="canonical" href="https://ravenmotorsport.com">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SportsTeam",
+    "name": "Raven Motorsport",
+    "sport": "Endurance Karting",
+    "description": "Endurance karting team competing in the Daytona 24 Hours at Milton Keynes since 2017",
+    "url": "https://ravenmotorsport.com",
+    "foundingDate": "2017",
+    "slogan": "Mindset. Momentum. Mettle."
+  }
+  </script>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -216,9 +229,9 @@
   <section class="section fade-in-section bg-black text-light text-center">
     <div class="container">
       <h2 class="mb-4">Quick Links</h2>
-      <a href="https://speedhive.mylaps.com/livetiming/52F470FC643E52C0-2147483649" class="btn btn-outline-light m-2">Live Results</a>
-      <a href="https://pitwall.ravenmotorsport.com/" class="btn btn-outline-light m-2">Management</a>
-      <a href="#" class="btn btn-outline-light m-2 d-none">Photo Gallery</a>
+      <a href="/info" class="btn btn-outline-light m-2">2026 Race Info</a>
+      <a href="https://speedhive.mylaps.com/livetiming/52F470FC643E52C0-2147483649" class="btn btn-outline-light m-2" target="_blank" rel="noopener">Live Results</a>
+      <a href="https://pitwall.ravenmotorsport.com/" class="btn btn-outline-light m-2" target="_blank" rel="noopener">Management</a>
     </div>
   </section>
 
@@ -267,7 +280,7 @@
   <!-- Footer Text -->
   <footer class="bg-black text-center py-3 small" style="color: #ccc;">
   <div class="container">
-    &copy; Raven Motorsport 2025. All rights reserved. <a href="https://ravenmotorsport.com" style="color: #ccc; text-decoration: none;">ravenmotorsport.com</a>
+    &copy; Raven Motorsport 2026. All rights reserved. <a href="/" style="color: #ccc; text-decoration: none;">Home</a> | <a href="/info" style="color: #ccc; text-decoration: none;">Race Info</a>
   </div>
 </footer>
 

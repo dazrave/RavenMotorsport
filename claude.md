@@ -51,6 +51,7 @@ sshpass -p 'EqualPurpleMouse' ssh -o StrictHostKeyChecking=no root@192.168.0.23 
 - Managers have separate section with no installment requirements
 - Fully mobile responsive with abbreviated names on mobile (e.g., "D. Ravenscroft" instead of "Darren Ravenscroft")
 - Payment methods displayed at the top of the page
+- **Payment schedule shows only active deadlines** - admin can hide past/completed installments (e.g., deposit after deadline has passed)
 - **Days to Go urgency indicator**: Each payment deadline shows days remaining with color-coded urgency:
   - Red: Overdue (creates pressure to pay immediately)
   - Orange: 7 days or less (urgent)
@@ -62,6 +63,11 @@ sshpass -p 'EqualPurpleMouse' ssh -o StrictHostKeyChecking=no root@192.168.0.23 
   - Add unlimited installments with custom names, due dates, and amounts per driver
   - Edit existing installments (name, date, amount)
   - Delete installments (only if no payments have been made)
+  - **Show/Hide installments** from driver payment schedule view (useful for hiding past deadlines like deposits)
+    - Yellow "Hide" button = currently visible to drivers
+    - Green "Show" button = currently hidden from drivers
+    - Hidden installments show "Hidden" badge in admin view
+    - All payment data is preserved when hidden
   - View total collected per team per installment
   - See what's left to collect for each installment
   - Days remaining shown for each installment with urgency indicators

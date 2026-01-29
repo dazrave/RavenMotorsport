@@ -80,7 +80,33 @@ if (isset($_GET['logout'])) {
     exit;
 }
 
-// Handle payment updates
+// Handle logging a new payment
+if (isset($_POST['log_payment']) && isset($_SESSION['admin'])) {
+    $driver = $_POST['driver'];
+    $paymentType = $_POST['payment_type'];
+    $amount = floatval($_POST['amount']);
+
+    if (isset($paymentData['drivers'][$driver]) && $amount > 0) {
+        // Add to existing amount
+        $paymentData['drivers'][$driver][$paymentType] += $amount;
+
+        // Log the payment in history
+        if (!isset($paymentData['payment_history'])) {
+            $paymentData['payment_history'] = [];
+        }
+        $paymentData['payment_history'][] = [
+            'driver' => $driver,
+            'type' => $paymentType,
+            'amount' => $amount,
+            'date' => date('Y-m-d H:i:s')
+        ];
+
+        file_put_contents($dataFile, json_encode($paymentData, JSON_PRETTY_PRINT));
+        $success = "Logged £" . number_format($amount, 2) . " payment for " . htmlspecialchars($driver) . " (" . ucfirst(str_replace('_', ' ', $paymentType)) . ")";
+    }
+}
+
+// Handle payment updates (manual edit)
 if (isset($_POST['update_payment']) && isset($_SESSION['admin'])) {
     $driver = $_POST['driver'];
     if (isset($paymentData['drivers'][$driver])) {
@@ -220,6 +246,14 @@ foreach ($paymentData['drivers'] as $driver) {
       background-color: #6d1c16;
       border-color: #6d1c16;
     }
+    .btn-success {
+      background-color: #28a745;
+      border-color: #28a745;
+    }
+    .btn-success:hover {
+      background-color: #218838;
+      border-color: #1e7e34;
+    }
     .admin-panel {
       background: #1a1a1a;
       border: 2px solid #8b241d;
@@ -227,15 +261,19 @@ foreach ($paymentData['drivers'] as $driver) {
       padding: 1.5rem;
       margin: 1.5rem 0;
     }
-    input[type="number"], input[type="date"], input[type="password"] {
+    input[type="number"], input[type="date"], input[type="password"], select.form-control {
       background: #333;
       color: #fff;
       border: 1px solid #555;
     }
-    input[type="number"]:focus, input[type="date"]:focus, input[type="password"]:focus {
+    input[type="number"]:focus, input[type="date"]:focus, input[type="password"]:focus, select.form-control:focus {
       background: #444;
       color: #fff;
       border-color: #8b241d;
+    }
+    select.form-control option {
+      background: #333;
+      color: #fff;
     }
 
     /* Mobile responsive */
@@ -581,6 +619,70 @@ foreach ($paymentData['drivers'] as $driver) {
             <small>Outstanding</small>
           </div>
         </div>
+      </div>
+
+      <!-- Log Payment -->
+      <div class="admin-panel">
+        <h4>Log Payment</h4>
+        <form method="POST" class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Driver</label>
+            <select name="driver" class="form-control" required>
+              <option value="">Select driver...</option>
+              <?php foreach ($paymentData['drivers'] as $name => $driver): ?>
+                <option value="<?php echo htmlspecialchars($name); ?>"><?php echo htmlspecialchars($name); ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Payment Type</label>
+            <select name="payment_type" class="form-control" required>
+              <option value="deposit">Deposit</option>
+              <option value="installment1">Installment 1</option>
+              <option value="installment2">Installment 2</option>
+              <option value="team_kit">Team Kit</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Amount (£)</label>
+            <input type="number" name="amount" class="form-control" step="0.01" min="0.01" placeholder="0.00" required>
+          </div>
+          <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" name="log_payment" class="btn btn-success w-100">Log Payment</button>
+          </div>
+        </form>
+
+        <!-- Recent Payments -->
+        <?php if (isset($paymentData['payment_history']) && count($paymentData['payment_history']) > 0): ?>
+          <div class="mt-4">
+            <h5 class="h6">Recent Payments (Last 10)</h5>
+            <div class="table-responsive">
+              <table class="table table-dark table-sm">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Driver</th>
+                    <th>Type</th>
+                    <th class="text-end">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php
+                  $recentPayments = array_slice(array_reverse($paymentData['payment_history']), 0, 10);
+                  foreach ($recentPayments as $payment):
+                  ?>
+                    <tr>
+                      <td><?php echo date('d M Y H:i', strtotime($payment['date'])); ?></td>
+                      <td><?php echo htmlspecialchars($payment['driver']); ?></td>
+                      <td><?php echo ucfirst(str_replace('_', ' ', $payment['type'])); ?></td>
+                      <td class="text-end">£<?php echo number_format($payment['amount'], 2); ?></td>
+                    </tr>
+                  <?php endforeach; ?>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        <?php endif; ?>
       </div>
 
       <!-- Settings -->

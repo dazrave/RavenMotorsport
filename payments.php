@@ -1,94 +1,102 @@
 <?php
 session_start();
 
-// Payment data storage
-$dataFile = __DIR__ . '/payment_data.json';
+// Database initialization
+$dbFile = __DIR__ . '/payment_tracker.db';
+$db = new SQLite3($dbFile);
 
-// Initialize default payment data if file doesn't exist
-if (!file_exists($dataFile)) {
-    $defaultData = [
-        'drivers' => [
-            'Tim Hockham' => ['deposit' => 0, 'team_kit' => 0, 'installment1' => 0, 'installment2' => 0, 'role' => 'Race Manager', 'team' => 'Management', 'is_driver' => false],
-            'Adrian Herrero Sanchez' => ['deposit' => 0, 'team_kit' => 0, 'installment1' => 0, 'installment2' => 0, 'role' => 'Race Manager', 'team' => 'Management', 'is_driver' => false],
-            'Darren Ravenscroft' => ['deposit' => 200, 'team_kit' => 0, 'installment1' => 0, 'installment2' => 0, 'role' => 'Team Principal & Driver', 'team' => 'Alpha', 'is_driver' => true],
-            'Andy Tait' => ['deposit' => 200, 'team_kit' => 0, 'installment1' => 0, 'installment2' => 0, 'role' => 'Driver', 'team' => 'Alpha', 'is_driver' => true],
-            'Matt Casey' => ['deposit' => 200, 'team_kit' => 0, 'installment1' => 0, 'installment2' => 0, 'role' => 'Driver', 'team' => 'Alpha', 'is_driver' => true],
-            'Dave Parker' => ['deposit' => 200, 'team_kit' => 0, 'installment1' => 0, 'installment2' => 0, 'role' => 'Driver', 'team' => 'Alpha', 'is_driver' => true],
-            'Tomek Zet' => ['deposit' => 200, 'team_kit' => 0, 'installment1' => 0, 'installment2' => 0, 'role' => 'Driver', 'team' => 'Alpha', 'is_driver' => true],
-            'Ryan Welch' => ['deposit' => 200, 'team_kit' => 0, 'installment1' => 0, 'installment2' => 0, 'role' => 'Driver', 'team' => 'Bravo', 'is_driver' => true],
-            'Luke Gore' => ['deposit' => 200, 'team_kit' => 0, 'installment1' => 0, 'installment2' => 0, 'role' => 'Driver', 'team' => 'Bravo', 'is_driver' => true],
-            'James Eaton' => ['deposit' => 100, 'team_kit' => 0, 'installment1' => 0, 'installment2' => 0, 'role' => 'Driver', 'team' => 'Bravo', 'is_driver' => true],
-            'James Addison' => ['deposit' => 200, 'team_kit' => 0, 'installment1' => 0, 'installment2' => 0, 'role' => 'Driver', 'team' => 'Bravo', 'is_driver' => true],
-            'Daniel Lane' => ['deposit' => 200, 'team_kit' => 0, 'installment1' => 0, 'installment2' => 0, 'role' => 'Driver', 'team' => 'Bravo', 'is_driver' => true]
-        ],
-        'deadlines' => [
-            'deposit' => '2026-01-01',
-            'installment1' => '2026-02-01',
-            'installment2' => '2026-03-01'
-        ],
-        'total_per_driver' => 670,
-        'team_kit_fee' => 0,
-        'expected_amounts' => [
-            'deposit' => 200,
-            'installment1' => 223.50,
-            'installment2' => 246.50
-        ]
-    ];
-    file_put_contents($dataFile, json_encode($defaultData, JSON_PRETTY_PRINT));
-}
+// Create tables if they don't exist
+$db->exec("
+CREATE TABLE IF NOT EXISTS teams (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    entry_cost REAL DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
 
-// Load payment data
-$paymentData = json_decode(file_get_contents($dataFile), true);
+CREATE TABLE IF NOT EXISTS drivers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    team_id INTEGER NOT NULL,
+    role TEXT,
+    is_driver INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (team_id) REFERENCES teams(id)
+);
 
-// Ensure data loaded correctly
-if (!is_array($paymentData)) {
-    $paymentData = [
-        'drivers' => [],
-        'deadlines' => [
-            'deposit' => '2026-01-01',
-            'installment1' => '2026-02-01',
-            'installment2' => '2026-03-01'
-        ],
-        'total_per_driver' => 670,
-        'team_kit_fee' => 0,
-        'expected_amounts' => [
-            'deposit' => 200,
-            'installment1' => 223.50,
-            'installment2' => 246.50
-        ]
-    ];
-}
+CREATE TABLE IF NOT EXISTS installments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    due_date TEXT,
+    amount_per_driver REAL DEFAULT 0,
+    display_order INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
 
-// Ensure team_kit_fee exists
-if (!isset($paymentData['team_kit_fee'])) {
-    $paymentData['team_kit_fee'] = 0;
-}
+CREATE TABLE IF NOT EXISTS payments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    driver_id INTEGER NOT NULL,
+    installment_id INTEGER NOT NULL,
+    amount REAL NOT NULL,
+    payment_date TEXT DEFAULT CURRENT_TIMESTAMP,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (driver_id) REFERENCES drivers(id),
+    FOREIGN KEY (installment_id) REFERENCES installments(id)
+);
 
-// Ensure expected_amounts exists
-if (!isset($paymentData['expected_amounts'])) {
-    $paymentData['expected_amounts'] = [
-        'deposit' => 200,
-        'installment1' => 223.50,
-        'installment2' => 246.50
-    ];
-}
+CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT
+);
+");
 
-// Ensure drivers array exists
-if (!isset($paymentData['drivers']) || !is_array($paymentData['drivers'])) {
-    $paymentData['drivers'] = [];
-}
+// Initialize default data if tables are empty
+$teamCount = $db->querySingle("SELECT COUNT(*) FROM teams");
+if ($teamCount == 0) {
+    // Insert teams
+    $db->exec("
+        INSERT INTO teams (name, entry_cost) VALUES
+        ('Alpha', 3350),
+        ('Bravo', 3350),
+        ('Management', 0);
+    ");
 
-// Ensure all drivers have required fields
-foreach ($paymentData['drivers'] as $name => &$driver) {
-    if (!is_array($driver)) {
-        continue;
-    }
-    if (!isset($driver['team_kit'])) {
-        $driver['team_kit'] = 0;
-    }
-    if (!isset($driver['is_driver'])) {
-        $driver['is_driver'] = (isset($driver['team']) && $driver['team'] !== 'Management');
-    }
+    // Insert drivers
+    $alphaId = $db->querySingle("SELECT id FROM teams WHERE name='Alpha'");
+    $bravoId = $db->querySingle("SELECT id FROM teams WHERE name='Bravo'");
+    $mgmtId = $db->querySingle("SELECT id FROM teams WHERE name='Management'");
+
+    $db->exec("
+        INSERT INTO drivers (name, team_id, role, is_driver) VALUES
+        ('Tim Hockham', $mgmtId, 'Race Manager', 0),
+        ('Adrian Herrero Sanchez', $mgmtId, 'Race Manager', 0),
+        ('Darren Ravenscroft', $alphaId, 'Team Principal & Driver', 1),
+        ('Andy Tait', $alphaId, 'Driver', 1),
+        ('Matt Casey', $alphaId, 'Driver', 1),
+        ('Dave Parker', $alphaId, 'Driver', 1),
+        ('Tomek Zet', $alphaId, 'Driver', 1),
+        ('Ryan Welch', $bravoId, 'Driver', 1),
+        ('Luke Gore', $bravoId, 'Driver', 1),
+        ('James Eaton', $bravoId, 'Driver', 1),
+        ('James Addison', $bravoId, 'Driver', 1),
+        ('Daniel Lane', $bravoId, 'Driver', 1);
+    ");
+
+    // Insert default installments
+    $db->exec("
+        INSERT INTO installments (name, due_date, amount_per_driver, display_order) VALUES
+        ('Deposit', '2026-01-01', 200.00, 1),
+        ('Installment 1', '2026-02-01', 223.50, 2),
+        ('Installment 2', '2026-03-01', 246.50, 3),
+        ('Team Kit', '2026-03-01', 0.00, 4);
+    ");
+
+    // Insert settings
+    $db->exec("
+        INSERT OR REPLACE INTO settings (key, value) VALUES
+        ('total_per_driver', '670'),
+        ('team_kit_fee', '0');
+    ");
 }
 
 // Handle admin login
@@ -107,67 +115,162 @@ if (isset($_GET['logout'])) {
     exit;
 }
 
-// Handle logging a new payment
-if (isset($_POST['log_payment']) && isset($_SESSION['admin'])) {
-    $driver = $_POST['driver'];
-    $paymentType = $_POST['payment_type'];
-    $amount = floatval($_POST['amount']);
+// Admin functions
+if (isset($_SESSION['admin'])) {
+    // Add new installment
+    if (isset($_POST['add_installment'])) {
+        $name = $_POST['installment_name'];
+        $dueDate = $_POST['installment_due_date'];
+        $amountPerDriver = floatval($_POST['installment_amount']);
+        $maxOrder = $db->querySingle("SELECT MAX(display_order) FROM installments") ?: 0;
 
-    if (isset($paymentData['drivers'][$driver]) && $amount > 0) {
-        // Add to existing amount
-        $paymentData['drivers'][$driver][$paymentType] += $amount;
+        $stmt = $db->prepare("INSERT INTO installments (name, due_date, amount_per_driver, display_order) VALUES (?, ?, ?, ?)");
+        $stmt->bindValue(1, $name, SQLITE3_TEXT);
+        $stmt->bindValue(2, $dueDate, SQLITE3_TEXT);
+        $stmt->bindValue(3, $amountPerDriver, SQLITE3_FLOAT);
+        $stmt->bindValue(4, $maxOrder + 1, SQLITE3_INTEGER);
+        $stmt->execute();
 
-        // Log the payment in history
-        if (!isset($paymentData['payment_history'])) {
-            $paymentData['payment_history'] = [];
+        $success = "Installment '$name' added successfully";
+    }
+
+    // Update installment
+    if (isset($_POST['update_installment'])) {
+        $id = intval($_POST['installment_id']);
+        $name = $_POST['installment_name'];
+        $dueDate = $_POST['installment_due_date'];
+        $amountPerDriver = floatval($_POST['installment_amount']);
+
+        $stmt = $db->prepare("UPDATE installments SET name=?, due_date=?, amount_per_driver=? WHERE id=?");
+        $stmt->bindValue(1, $name, SQLITE3_TEXT);
+        $stmt->bindValue(2, $dueDate, SQLITE3_TEXT);
+        $stmt->bindValue(3, $amountPerDriver, SQLITE3_FLOAT);
+        $stmt->bindValue(4, $id, SQLITE3_INTEGER);
+        $stmt->execute();
+
+        $success = "Installment updated successfully";
+    }
+
+    // Delete installment (only if no payments)
+    if (isset($_POST['delete_installment'])) {
+        $id = intval($_POST['installment_id']);
+
+        // Check if any payments exist for this installment
+        $paymentCount = $db->querySingle("SELECT COUNT(*) FROM payments WHERE installment_id=$id");
+        if ($paymentCount > 0) {
+            $error = "Cannot delete installment with existing payments. Remove payments first.";
+        } else {
+            $db->exec("DELETE FROM installments WHERE id=$id");
+            $success = "Installment deleted successfully";
         }
-        $paymentData['payment_history'][] = [
-            'driver' => $driver,
-            'type' => $paymentType,
-            'amount' => $amount,
-            'date' => date('Y-m-d H:i:s')
-        ];
+    }
 
-        file_put_contents($dataFile, json_encode($paymentData, JSON_PRETTY_PRINT));
-        $success = "Logged £" . number_format($amount, 2) . " payment for " . htmlspecialchars($driver) . " (" . ucfirst(str_replace('_', ' ', $paymentType)) . ")";
+    // Log payment
+    if (isset($_POST['log_payment'])) {
+        $driverId = intval($_POST['driver_id']);
+        $installmentId = intval($_POST['installment_id']);
+        $amount = floatval($_POST['amount']);
+
+        if ($driverId > 0 && $installmentId > 0 && $amount > 0) {
+            $stmt = $db->prepare("INSERT INTO payments (driver_id, installment_id, amount) VALUES (?, ?, ?)");
+            $stmt->bindValue(1, $driverId, SQLITE3_INTEGER);
+            $stmt->bindValue(2, $installmentId, SQLITE3_INTEGER);
+            $stmt->bindValue(3, $amount, SQLITE3_FLOAT);
+            $stmt->execute();
+
+            $driverName = $db->querySingle("SELECT name FROM drivers WHERE id=$driverId");
+            $installmentName = $db->querySingle("SELECT name FROM installments WHERE id=$installmentId");
+            $success = "Logged £" . number_format($amount, 2) . " for " . htmlspecialchars($driverName) . " (" . htmlspecialchars($installmentName) . ")";
+        }
+    }
+
+    // Update team entry cost
+    if (isset($_POST['update_team_costs'])) {
+        $alphaId = $db->querySingle("SELECT id FROM teams WHERE name='Alpha'");
+        $bravoId = $db->querySingle("SELECT id FROM teams WHERE name='Bravo'");
+
+        $alphaCost = floatval($_POST['alpha_cost']);
+        $bravoCost = floatval($_POST['bravo_cost']);
+
+        $db->exec("UPDATE teams SET entry_cost=$alphaCost WHERE id=$alphaId");
+        $db->exec("UPDATE teams SET entry_cost=$bravoCost WHERE id=$bravoId");
+
+        $success = "Team costs updated successfully";
+    }
+
+    // Update settings
+    if (isset($_POST['update_settings'])) {
+        $totalPerDriver = floatval($_POST['total_per_driver']);
+        $teamKitFee = floatval($_POST['team_kit_fee']);
+
+        $db->exec("INSERT OR REPLACE INTO settings (key, value) VALUES ('total_per_driver', '$totalPerDriver')");
+        $db->exec("INSERT OR REPLACE INTO settings (key, value) VALUES ('team_kit_fee', '$teamKitFee')");
+
+        $success = "Settings updated successfully";
     }
 }
 
-// Handle payment updates (manual edit)
-if (isset($_POST['update_payment']) && isset($_SESSION['admin'])) {
-    $driver = $_POST['driver'];
-    if (isset($paymentData['drivers'][$driver])) {
-        $paymentData['drivers'][$driver]['deposit'] = floatval($_POST['deposit']);
-        $paymentData['drivers'][$driver]['team_kit'] = floatval($_POST['team_kit']);
-        $paymentData['drivers'][$driver]['installment1'] = floatval($_POST['installment1']);
-        $paymentData['drivers'][$driver]['installment2'] = floatval($_POST['installment2']);
-        file_put_contents($dataFile, json_encode($paymentData, JSON_PRETTY_PRINT));
-        $success = "Payment updated for " . htmlspecialchars($driver);
+// Get all data
+$installments = [];
+$result = $db->query("SELECT * FROM installments ORDER BY display_order ASC");
+while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+    $installments[] = $row;
+}
+
+$teams = [];
+$result = $db->query("SELECT * FROM teams ORDER BY name ASC");
+while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+    $teams[] = $row;
+}
+
+$drivers = [];
+$result = $db->query("SELECT d.*, t.name as team_name FROM drivers d JOIN teams t ON d.team_id = t.id ORDER BY t.name, d.name");
+while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+    $drivers[] = $row;
+}
+
+// Get payment totals per driver per installment
+function getPaymentTotal($db, $driverId, $installmentId) {
+    $total = $db->querySingle("SELECT SUM(amount) FROM payments WHERE driver_id=$driverId AND installment_id=$installmentId");
+    return $total ?: 0;
+}
+
+// Get total collected and outstanding
+$totalCollected = $db->querySingle("SELECT SUM(amount) FROM payments") ?: 0;
+$totalPerDriver = floatval($db->querySingle("SELECT value FROM settings WHERE key='total_per_driver'") ?: 670);
+$teamKitFee = floatval($db->querySingle("SELECT value FROM settings WHERE key='team_kit_fee'") ?: 0);
+
+$driverCount = $db->querySingle("SELECT COUNT(*) FROM drivers WHERE is_driver=1");
+$totalExpected = $driverCount * ($totalPerDriver + $teamKitFee);
+$totalOutstanding = $totalExpected - $totalCollected;
+
+// Get team totals and remaining per installment
+function getTeamInstallmentTotals($db, $teamName, $installmentId) {
+    $result = $db->query("
+        SELECT SUM(p.amount) as total
+        FROM payments p
+        JOIN drivers d ON p.driver_id = d.id
+        JOIN teams t ON d.team_id = t.id
+        WHERE t.name='$teamName' AND p.installment_id=$installmentId
+    ");
+    $row = $result->fetchArray(SQLITE3_ASSOC);
+    return floatval($row['total'] ?: 0);
+}
+
+// Recent payments
+$recentPayments = [];
+if (isset($_SESSION['admin'])) {
+    $result = $db->query("
+        SELECT p.*, d.name as driver_name, i.name as installment_name
+        FROM payments p
+        JOIN drivers d ON p.driver_id = d.id
+        JOIN installments i ON p.installment_id = i.id
+        ORDER BY p.created_at DESC
+        LIMIT 10
+    ");
+    while ($row = $result->fetchArray(SQLITE3_ASSOC)) {
+        $recentPayments[] = $row;
     }
-}
-
-// Handle settings updates
-if (isset($_POST['update_deadlines']) && isset($_SESSION['admin'])) {
-    $paymentData['deadlines']['deposit'] = $_POST['deadline_deposit'];
-    $paymentData['deadlines']['installment1'] = $_POST['deadline_installment1'];
-    $paymentData['deadlines']['installment2'] = $_POST['deadline_installment2'];
-    $paymentData['total_per_driver'] = floatval($_POST['total_per_driver']);
-    $paymentData['team_kit_fee'] = floatval($_POST['team_kit_fee']);
-    $paymentData['expected_amounts']['deposit'] = floatval($_POST['expected_deposit']);
-    $paymentData['expected_amounts']['installment1'] = floatval($_POST['expected_installment1']);
-    $paymentData['expected_amounts']['installment2'] = floatval($_POST['expected_installment2']);
-    file_put_contents($dataFile, json_encode($paymentData, JSON_PRETTY_PRINT));
-    $success = "Settings updated successfully";
-}
-
-// Calculate totals
-$totalCollected = 0;
-$totalOutstanding = 0;
-foreach ($paymentData['drivers'] as $driver) {
-    $paid = $driver['deposit'] + $driver['team_kit'] + $driver['installment1'] + $driver['installment2'];
-    $totalCollected += $paid;
-    $expected = $driver['is_driver'] ? ($paymentData['total_per_driver'] + $paymentData['team_kit_fee']) : 0;
-    $totalOutstanding += ($expected - $paid);
 }
 
 ?>
@@ -284,6 +387,10 @@ foreach ($paymentData['drivers'] as $driver) {
       background-color: #218838;
       border-color: #1e7e34;
     }
+    .btn-danger {
+      background-color: #dc3545;
+      border-color: #dc3545;
+    }
     .admin-panel {
       background: #1a1a1a;
       border: 2px solid #8b241d;
@@ -291,12 +398,12 @@ foreach ($paymentData['drivers'] as $driver) {
       padding: 1.5rem;
       margin: 1.5rem 0;
     }
-    input[type="number"], input[type="date"], input[type="password"], select.form-control {
+    input[type="number"], input[type="date"], input[type="password"], input[type="text"], select.form-control {
       background: #333;
       color: #fff;
       border: 1px solid #555;
     }
-    input[type="number"]:focus, input[type="date"]:focus, input[type="password"]:focus, select.form-control:focus {
+    input[type="number"]:focus, input[type="date"]:focus, input[type="password"]:focus, input[type="text"]:focus, select.form-control:focus {
       background: #444;
       color: #fff;
       border-color: #8b241d;
@@ -338,6 +445,15 @@ foreach ($paymentData['drivers'] as $driver) {
       <div class="alert alert-success"><?php echo htmlspecialchars($success); ?></div>
     <?php endif; ?>
 
+    <!-- Payment Methods (Always at Top) -->
+    <div class="info-box">
+      <h5 style="color: #8b241d;">Payment Methods</h5>
+      <ul class="mb-0">
+        <li>PayPal: <a href="mailto:hello@dazrave.uk" style="color: #8b241d;">hello@dazrave.uk</a> or <a href="https://paypal.me/dazrave" target="_blank" style="color: #8b241d;">paypal.me/dazrave</a></li>
+        <li>Bank: (ac) <strong>03039125</strong> / (s) <strong>04-00-04</strong> or <a href="https://monzo.me/darrenravenscroft" target="_blank" style="color: #8b241d;">monzo.me/darrenravenscroft</a></li>
+      </ul>
+    </div>
+
     <?php if (!isset($_SESSION['admin'])): ?>
       <!-- DRIVER VIEW -->
 
@@ -345,31 +461,18 @@ foreach ($paymentData['drivers'] as $driver) {
       <div class="info-box">
         <h4>Payment Schedule</h4>
         <div class="deadline-grid">
-          <div class="deadline-item">
-            <strong>Deposit</strong>
-            £<?php echo number_format($paymentData['expected_amounts']['deposit'], 2); ?><br>
-            <small>Due: <?php echo date('d M Y', strtotime($paymentData['deadlines']['deposit'])); ?></small>
-          </div>
-          <div class="deadline-item">
-            <strong>Installment 1</strong>
-            £<?php echo number_format($paymentData['expected_amounts']['installment1'], 2); ?><br>
-            <small>Due: <?php echo date('d M Y', strtotime($paymentData['deadlines']['installment1'])); ?></small>
-          </div>
-          <div class="deadline-item">
-            <strong>Installment 2</strong>
-            £<?php echo number_format($paymentData['expected_amounts']['installment2'], 2); ?><br>
-            <small>Due: <?php echo date('d M Y', strtotime($paymentData['deadlines']['installment2'])); ?></small>
-          </div>
-          <?php if ($paymentData['team_kit_fee'] > 0): ?>
-          <div class="deadline-item">
-            <strong>Team Kit</strong>
-            £<?php echo number_format($paymentData['team_kit_fee'], 2); ?><br>
-            <small>Optional</small>
-          </div>
-          <?php endif; ?>
+          <?php foreach ($installments as $inst): ?>
+            <?php if ($inst['amount_per_driver'] > 0): ?>
+            <div class="deadline-item">
+              <strong><?php echo htmlspecialchars($inst['name']); ?></strong>
+              £<?php echo number_format($inst['amount_per_driver'], 2); ?><br>
+              <small>Due: <?php echo $inst['due_date'] ? date('d M Y', strtotime($inst['due_date'])) : 'TBD'; ?></small>
+            </div>
+            <?php endif; ?>
+          <?php endforeach; ?>
         </div>
         <div class="text-center mt-3">
-          <small>Total per driver: <strong>£<?php echo number_format($paymentData['total_per_driver'], 2); ?></strong></small>
+          <small>Total per driver: <strong>£<?php echo number_format($totalPerDriver, 2); ?></strong></small>
         </div>
       </div>
 
@@ -381,64 +484,40 @@ foreach ($paymentData['drivers'] as $driver) {
             <thead>
               <tr>
                 <th>Driver</th>
-                <th class="text-center">Deposit</th>
-                <?php if ($paymentData['team_kit_fee'] > 0): ?>
-                <th class="text-center">Kit</th>
-                <?php endif; ?>
-                <th class="text-center">Inst 1</th>
-                <th class="text-center">Inst 2</th>
+                <?php foreach ($installments as $inst): ?>
+                  <th class="text-center"><?php echo htmlspecialchars($inst['name']); ?></th>
+                <?php endforeach; ?>
                 <th class="text-end">Total Paid</th>
                 <th class="text-end">Outstanding</th>
               </tr>
             </thead>
             <tbody>
-              <?php foreach ($paymentData['drivers'] as $name => $driver): ?>
-                <?php if ($driver['team'] === 'Alpha' && $driver['is_driver']): ?>
+              <?php foreach ($drivers as $driver): ?>
+                <?php if ($driver['team_name'] === 'Alpha' && $driver['is_driver']): ?>
                   <?php
-                  $totalPaid = $driver['deposit'] + $driver['team_kit'] + $driver['installment1'] + $driver['installment2'];
-                  $totalDue = $paymentData['total_per_driver'] + $paymentData['team_kit_fee'];
-                  $outstanding = $totalDue - $totalPaid;
+                  $totalPaid = 0;
+                  foreach ($installments as $inst) {
+                      $totalPaid += getPaymentTotal($db, $driver['id'], $inst['id']);
+                  }
+                  $outstanding = ($totalPerDriver + $teamKitFee) - $totalPaid;
                   ?>
                   <tr>
-                    <td><strong><?php echo htmlspecialchars($name); ?></strong></td>
-                    <td class="text-center">
-                      <?php if ($driver['deposit'] >= $paymentData['expected_amounts']['deposit']): ?>
-                        <span class="paid check">✓</span>
-                      <?php elseif ($driver['deposit'] > 0): ?>
-                        <span class="partial">£<?php echo number_format($driver['deposit'], 0); ?></span>
-                      <?php else: ?>
-                        <span class="unpaid">-</span>
-                      <?php endif; ?>
-                    </td>
-                    <?php if ($paymentData['team_kit_fee'] > 0): ?>
-                    <td class="text-center">
-                      <?php if ($driver['team_kit'] >= $paymentData['team_kit_fee']): ?>
-                        <span class="paid check">✓</span>
-                      <?php elseif ($driver['team_kit'] > 0): ?>
-                        <span class="partial">£<?php echo number_format($driver['team_kit'], 0); ?></span>
-                      <?php else: ?>
-                        <span class="unpaid">-</span>
-                      <?php endif; ?>
-                    </td>
-                    <?php endif; ?>
-                    <td class="text-center">
-                      <?php if ($driver['installment1'] >= $paymentData['expected_amounts']['installment1']): ?>
-                        <span class="paid check">✓</span>
-                      <?php elseif ($driver['installment1'] > 0): ?>
-                        <span class="partial">£<?php echo number_format($driver['installment1'], 0); ?></span>
-                      <?php else: ?>
-                        <span class="unpaid">-</span>
-                      <?php endif; ?>
-                    </td>
-                    <td class="text-center">
-                      <?php if ($driver['installment2'] >= $paymentData['expected_amounts']['installment2']): ?>
-                        <span class="paid check">✓</span>
-                      <?php elseif ($driver['installment2'] > 0): ?>
-                        <span class="partial">£<?php echo number_format($driver['installment2'], 0); ?></span>
-                      <?php else: ?>
-                        <span class="unpaid">-</span>
-                      <?php endif; ?>
-                    </td>
+                    <td><strong><?php echo htmlspecialchars($driver['name']); ?></strong></td>
+                    <?php foreach ($installments as $inst): ?>
+                      <?php
+                      $paid = getPaymentTotal($db, $driver['id'], $inst['id']);
+                      $expected = $inst['amount_per_driver'];
+                      ?>
+                      <td class="text-center">
+                        <?php if ($expected > 0 && $paid >= $expected): ?>
+                          <span class="paid check">✓</span>
+                        <?php elseif ($paid > 0): ?>
+                          <span class="partial">£<?php echo number_format($paid, 0); ?></span>
+                        <?php else: ?>
+                          <span class="unpaid">-</span>
+                        <?php endif; ?>
+                      </td>
+                    <?php endforeach; ?>
                     <td class="text-end"><strong>£<?php echo number_format($totalPaid, 2); ?></strong></td>
                     <td class="text-end <?php echo $outstanding <= 0 ? 'paid' : 'unpaid'; ?>">
                       £<?php echo number_format($outstanding, 2); ?>
@@ -459,64 +538,40 @@ foreach ($paymentData['drivers'] as $driver) {
             <thead>
               <tr>
                 <th>Driver</th>
-                <th class="text-center">Deposit</th>
-                <?php if ($paymentData['team_kit_fee'] > 0): ?>
-                <th class="text-center">Kit</th>
-                <?php endif; ?>
-                <th class="text-center">Inst 1</th>
-                <th class="text-center">Inst 2</th>
+                <?php foreach ($installments as $inst): ?>
+                  <th class="text-center"><?php echo htmlspecialchars($inst['name']); ?></th>
+                <?php endforeach; ?>
                 <th class="text-end">Total Paid</th>
                 <th class="text-end">Outstanding</th>
               </tr>
             </thead>
             <tbody>
-              <?php foreach ($paymentData['drivers'] as $name => $driver): ?>
-                <?php if ($driver['team'] === 'Bravo' && $driver['is_driver']): ?>
+              <?php foreach ($drivers as $driver): ?>
+                <?php if ($driver['team_name'] === 'Bravo' && $driver['is_driver']): ?>
                   <?php
-                  $totalPaid = $driver['deposit'] + $driver['team_kit'] + $driver['installment1'] + $driver['installment2'];
-                  $totalDue = $paymentData['total_per_driver'] + $paymentData['team_kit_fee'];
-                  $outstanding = $totalDue - $totalPaid;
+                  $totalPaid = 0;
+                  foreach ($installments as $inst) {
+                      $totalPaid += getPaymentTotal($db, $driver['id'], $inst['id']);
+                  }
+                  $outstanding = ($totalPerDriver + $teamKitFee) - $totalPaid;
                   ?>
                   <tr>
-                    <td><strong><?php echo htmlspecialchars($name); ?></strong></td>
-                    <td class="text-center">
-                      <?php if ($driver['deposit'] >= $paymentData['expected_amounts']['deposit']): ?>
-                        <span class="paid check">✓</span>
-                      <?php elseif ($driver['deposit'] > 0): ?>
-                        <span class="partial">£<?php echo number_format($driver['deposit'], 0); ?></span>
-                      <?php else: ?>
-                        <span class="unpaid">-</span>
-                      <?php endif; ?>
-                    </td>
-                    <?php if ($paymentData['team_kit_fee'] > 0): ?>
-                    <td class="text-center">
-                      <?php if ($driver['team_kit'] >= $paymentData['team_kit_fee']): ?>
-                        <span class="paid check">✓</span>
-                      <?php elseif ($driver['team_kit'] > 0): ?>
-                        <span class="partial">£<?php echo number_format($driver['team_kit'], 0); ?></span>
-                      <?php else: ?>
-                        <span class="unpaid">-</span>
-                      <?php endif; ?>
-                    </td>
-                    <?php endif; ?>
-                    <td class="text-center">
-                      <?php if ($driver['installment1'] >= $paymentData['expected_amounts']['installment1']): ?>
-                        <span class="paid check">✓</span>
-                      <?php elseif ($driver['installment1'] > 0): ?>
-                        <span class="partial">£<?php echo number_format($driver['installment1'], 0); ?></span>
-                      <?php else: ?>
-                        <span class="unpaid">-</span>
-                      <?php endif; ?>
-                    </td>
-                    <td class="text-center">
-                      <?php if ($driver['installment2'] >= $paymentData['expected_amounts']['installment2']): ?>
-                        <span class="paid check">✓</span>
-                      <?php elseif ($driver['installment2'] > 0): ?>
-                        <span class="partial">£<?php echo number_format($driver['installment2'], 0); ?></span>
-                      <?php else: ?>
-                        <span class="unpaid">-</span>
-                      <?php endif; ?>
-                    </td>
+                    <td><strong><?php echo htmlspecialchars($driver['name']); ?></strong></td>
+                    <?php foreach ($installments as $inst): ?>
+                      <?php
+                      $paid = getPaymentTotal($db, $driver['id'], $inst['id']);
+                      $expected = $inst['amount_per_driver'];
+                      ?>
+                      <td class="text-center">
+                        <?php if ($expected > 0 && $paid >= $expected): ?>
+                          <span class="paid check">✓</span>
+                        <?php elseif ($paid > 0): ?>
+                          <span class="partial">£<?php echo number_format($paid, 0); ?></span>
+                        <?php else: ?>
+                          <span class="unpaid">-</span>
+                        <?php endif; ?>
+                      </td>
+                    <?php endforeach; ?>
                     <td class="text-end"><strong>£<?php echo number_format($totalPaid, 2); ?></strong></td>
                     <td class="text-end <?php echo $outstanding <= 0 ? 'paid' : 'unpaid'; ?>">
                       £<?php echo number_format($outstanding, 2); ?>
@@ -532,7 +587,7 @@ foreach ($paymentData['drivers'] as $driver) {
       <!-- Management Team -->
       <?php
       $hasManagement = false;
-      foreach ($paymentData['drivers'] as $driver) {
+      foreach ($drivers as $driver) {
         if (!$driver['is_driver']) {
           $hasManagement = true;
           break;
@@ -548,38 +603,34 @@ foreach ($paymentData['drivers'] as $driver) {
               <tr>
                 <th>Name</th>
                 <th>Role</th>
-                <th class="text-center">Deposit</th>
-                <?php if ($paymentData['team_kit_fee'] > 0): ?>
-                <th class="text-center">Team Kit</th>
-                <?php endif; ?>
+                <?php foreach ($installments as $inst): ?>
+                  <th class="text-center"><?php echo htmlspecialchars($inst['name']); ?></th>
+                <?php endforeach; ?>
                 <th class="text-end">Total Paid</th>
               </tr>
             </thead>
             <tbody>
-              <?php foreach ($paymentData['drivers'] as $name => $driver): ?>
+              <?php foreach ($drivers as $driver): ?>
                 <?php if (!$driver['is_driver']): ?>
-                  <?php $totalPaid = $driver['deposit'] + $driver['team_kit']; ?>
+                  <?php
+                  $totalPaid = 0;
+                  foreach ($installments as $inst) {
+                      $totalPaid += getPaymentTotal($db, $driver['id'], $inst['id']);
+                  }
+                  ?>
                   <tr>
-                    <td><strong><?php echo htmlspecialchars($name); ?></strong></td>
+                    <td><strong><?php echo htmlspecialchars($driver['name']); ?></strong></td>
                     <td><?php echo htmlspecialchars($driver['role']); ?></td>
-                    <td class="text-center">
-                      <?php if ($driver['deposit'] > 0): ?>
-                        <span class="paid">£<?php echo number_format($driver['deposit'], 0); ?></span>
-                      <?php else: ?>
-                        <span class="unpaid">-</span>
-                      <?php endif; ?>
-                    </td>
-                    <?php if ($paymentData['team_kit_fee'] > 0): ?>
-                    <td class="text-center">
-                      <?php if ($driver['team_kit'] >= $paymentData['team_kit_fee']): ?>
-                        <span class="paid check">✓</span>
-                      <?php elseif ($driver['team_kit'] > 0): ?>
-                        <span class="partial">£<?php echo number_format($driver['team_kit'], 0); ?></span>
-                      <?php else: ?>
-                        <span class="unpaid">-</span>
-                      <?php endif; ?>
-                    </td>
-                    <?php endif; ?>
+                    <?php foreach ($installments as $inst): ?>
+                      <?php $paid = getPaymentTotal($db, $driver['id'], $inst['id']); ?>
+                      <td class="text-center">
+                        <?php if ($paid > 0): ?>
+                          <span class="paid">£<?php echo number_format($paid, 0); ?></span>
+                        <?php else: ?>
+                          <span class="unpaid">-</span>
+                        <?php endif; ?>
+                      </td>
+                    <?php endforeach; ?>
                     <td class="text-end"><strong>£<?php echo number_format($totalPaid, 2); ?></strong></td>
                   </tr>
                 <?php endif; ?>
@@ -589,15 +640,6 @@ foreach ($paymentData['drivers'] as $driver) {
         </div>
       </div>
       <?php endif; ?>
-
-      <!-- Payment Info -->
-      <div class="info-box">
-        <h5 style="color: #8b241d;">Payment Methods</h5>
-        <ul class="mb-0">
-          <li>PayPal: <a href="mailto:hello@dazrave.uk" style="color: #8b241d;">hello@dazrave.uk</a> or <a href="https://paypal.me/dazrave" target="_blank" style="color: #8b241d;">paypal.me/dazrave</a></li>
-          <li>Bank: (ac) <strong>03039125</strong> / (s) <strong>04-00-04</strong> or <a href="https://monzo.me/darrenravenscroft" target="_blank" style="color: #8b241d;">monzo.me/darrenravenscroft</a></li>
-        </ul>
-      </div>
 
       <!-- Admin Login Button -->
       <div class="text-center mb-4">
@@ -651,26 +693,110 @@ foreach ($paymentData['drivers'] as $driver) {
         </div>
       </div>
 
+      <!-- Team Costs & Installment Overview -->
+      <div class="admin-panel">
+        <h4>Team Entry Costs</h4>
+        <form method="POST" class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label class="form-label small">Alpha Team Entry Cost (£)</label>
+            <input type="number" name="alpha_cost" class="form-control form-control-sm" step="0.01" value="<?php echo $teams[0]['entry_cost']; ?>" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small">Bravo Team Entry Cost (£)</label>
+            <input type="number" name="bravo_cost" class="form-control form-control-sm" step="0.01" value="<?php echo $teams[1]['entry_cost']; ?>" required>
+          </div>
+          <div class="col-12">
+            <button type="submit" name="update_team_costs" class="btn btn-primary btn-sm">Update Team Costs</button>
+          </div>
+        </form>
+
+        <h4 class="mt-4">Installment Summary</h4>
+        <div class="table-responsive">
+          <table class="table table-dark table-sm">
+            <thead>
+              <tr>
+                <th>Installment</th>
+                <th>Due Date</th>
+                <th>Per Driver</th>
+                <th class="text-center">Alpha Collected</th>
+                <th class="text-center">Bravo Collected</th>
+                <th class="text-center">Total Collected</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($installments as $inst): ?>
+                <?php
+                $alphaTotal = getTeamInstallmentTotals($db, 'Alpha', $inst['id']);
+                $bravoTotal = getTeamInstallmentTotals($db, 'Bravo', $inst['id']);
+                $instTotal = $alphaTotal + $bravoTotal;
+                ?>
+                <tr>
+                  <td><strong><?php echo htmlspecialchars($inst['name']); ?></strong></td>
+                  <td><?php echo $inst['due_date'] ? date('d M Y', strtotime($inst['due_date'])) : 'TBD'; ?></td>
+                  <td>£<?php echo number_format($inst['amount_per_driver'], 2); ?></td>
+                  <td class="text-center">£<?php echo number_format($alphaTotal, 2); ?></td>
+                  <td class="text-center">£<?php echo number_format($bravoTotal, 2); ?></td>
+                  <td class="text-center"><strong>£<?php echo number_format($instTotal, 2); ?></strong></td>
+                  <td class="text-end">
+                    <button class="btn btn-sm btn-primary" onclick="editInstallment(<?php echo $inst['id']; ?>)">Edit</button>
+                    <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this installment?');">
+                      <input type="hidden" name="installment_id" value="<?php echo $inst['id']; ?>">
+                      <button type="submit" name="delete_installment" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                  </td>
+                </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Add/Edit Installment Form -->
+        <div class="mt-4 p-3 border border-secondary rounded">
+          <h5 id="installmentFormTitle">Add New Installment</h5>
+          <form method="POST" id="installmentForm" class="row g-3">
+            <input type="hidden" name="installment_id" id="installment_id">
+            <div class="col-md-4">
+              <label class="form-label small">Name</label>
+              <input type="text" name="installment_name" id="installment_name" class="form-control form-control-sm" placeholder="e.g. Installment 3" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small">Due Date</label>
+              <input type="date" name="installment_due_date" id="installment_due_date" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small">Amount Per Driver (£)</label>
+              <input type="number" name="installment_amount" id="installment_amount" class="form-control form-control-sm" step="0.01" min="0" required>
+            </div>
+            <div class="col-12">
+              <button type="submit" name="add_installment" id="addInstallmentBtn" class="btn btn-success btn-sm">Add Installment</button>
+              <button type="submit" name="update_installment" id="updateInstallmentBtn" class="btn btn-success btn-sm" style="display:none;">Update Installment</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="resetInstallmentForm()">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
       <!-- Log Payment -->
       <div class="admin-panel">
         <h4>Log Payment</h4>
         <form method="POST" class="row g-3">
           <div class="col-md-4">
             <label class="form-label">Driver</label>
-            <select name="driver" class="form-control" required>
+            <select name="driver_id" class="form-control" required>
               <option value="">Select driver...</option>
-              <?php foreach ($paymentData['drivers'] as $name => $driver): ?>
-                <option value="<?php echo htmlspecialchars($name); ?>"><?php echo htmlspecialchars($name); ?></option>
+              <?php foreach ($drivers as $driver): ?>
+                <option value="<?php echo $driver['id']; ?>"><?php echo htmlspecialchars($driver['name']); ?></option>
               <?php endforeach; ?>
             </select>
           </div>
           <div class="col-md-3">
-            <label class="form-label">Payment Type</label>
-            <select name="payment_type" class="form-control" required>
-              <option value="deposit">Deposit</option>
-              <option value="installment1">Installment 1</option>
-              <option value="installment2">Installment 2</option>
-              <option value="team_kit">Team Kit</option>
+            <label class="form-label">Installment</label>
+            <select name="installment_id" class="form-control" required>
+              <option value="">Select installment...</option>
+              <?php foreach ($installments as $inst): ?>
+                <option value="<?php echo $inst['id']; ?>"><?php echo htmlspecialchars($inst['name']); ?></option>
+              <?php endforeach; ?>
             </select>
           </div>
           <div class="col-md-3">
@@ -683,7 +809,7 @@ foreach ($paymentData['drivers'] as $driver) {
         </form>
 
         <!-- Recent Payments -->
-        <?php if (isset($paymentData['payment_history']) && count($paymentData['payment_history']) > 0): ?>
+        <?php if (count($recentPayments) > 0): ?>
           <div class="mt-4">
             <h5 class="h6">Recent Payments (Last 10)</h5>
             <div class="table-responsive">
@@ -692,19 +818,16 @@ foreach ($paymentData['drivers'] as $driver) {
                   <tr>
                     <th>Date</th>
                     <th>Driver</th>
-                    <th>Type</th>
+                    <th>Installment</th>
                     <th class="text-end">Amount</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <?php
-                  $recentPayments = array_slice(array_reverse($paymentData['payment_history']), 0, 10);
-                  foreach ($recentPayments as $payment):
-                  ?>
+                  <?php foreach ($recentPayments as $payment): ?>
                     <tr>
-                      <td><?php echo date('d M Y H:i', strtotime($payment['date'])); ?></td>
-                      <td><?php echo htmlspecialchars($payment['driver']); ?></td>
-                      <td><?php echo ucfirst(str_replace('_', ' ', $payment['type'])); ?></td>
+                      <td><?php echo date('d M Y H:i', strtotime($payment['created_at'])); ?></td>
+                      <td><?php echo htmlspecialchars($payment['driver_name']); ?></td>
+                      <td><?php echo htmlspecialchars($payment['installment_name']); ?></td>
                       <td class="text-end">£<?php echo number_format($payment['amount'], 2); ?></td>
                     </tr>
                   <?php endforeach; ?>
@@ -715,148 +838,79 @@ foreach ($paymentData['drivers'] as $driver) {
         <?php endif; ?>
       </div>
 
-      <!-- Settings -->
+      <!-- Driver Payments Overview -->
       <div class="admin-panel">
-        <h4>Payment Settings</h4>
-        <form method="POST" class="row g-3">
-          <div class="col-12"><h5 class="h6 text-light">Deadlines</h5></div>
-          <div class="col-md-4">
-            <label class="form-label small">Deposit Deadline</label>
-            <input type="date" name="deadline_deposit" class="form-control form-control-sm" value="<?php echo $paymentData['deadlines']['deposit']; ?>" required>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label small">Installment 1</label>
-            <input type="date" name="deadline_installment1" class="form-control form-control-sm" value="<?php echo $paymentData['deadlines']['installment1']; ?>" required>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label small">Installment 2</label>
-            <input type="date" name="deadline_installment2" class="form-control form-control-sm" value="<?php echo $paymentData['deadlines']['installment2']; ?>" required>
-          </div>
-
-          <div class="col-12 mt-3"><h5 class="h6 text-light">Expected Amounts Per Driver</h5></div>
-          <div class="col-md-4">
-            <label class="form-label small">Deposit (£)</label>
-            <input type="number" name="expected_deposit" class="form-control form-control-sm" step="0.01" value="<?php echo $paymentData['expected_amounts']['deposit']; ?>" required>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label small">Installment 1 (£)</label>
-            <input type="number" name="expected_installment1" class="form-control form-control-sm" step="0.01" value="<?php echo $paymentData['expected_amounts']['installment1']; ?>" required>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label small">Installment 2 (£)</label>
-            <input type="number" name="expected_installment2" class="form-control form-control-sm" step="0.01" value="<?php echo $paymentData['expected_amounts']['installment2']; ?>" required>
-          </div>
-
-          <div class="col-12 mt-3"><h5 class="h6 text-light">Totals</h5></div>
-          <div class="col-md-6">
-            <label class="form-label small">Total Per Driver (£)</label>
-            <input type="number" name="total_per_driver" class="form-control form-control-sm" step="0.01" value="<?php echo $paymentData['total_per_driver']; ?>" required>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label small">Team Kit Fee (£)</label>
-            <input type="number" name="team_kit_fee" class="form-control form-control-sm" step="0.01" value="<?php echo $paymentData['team_kit_fee']; ?>" required>
-          </div>
-          <div class="col-12 mt-3">
-            <button type="submit" name="update_deadlines" class="btn btn-primary btn-sm">Update Settings</button>
-          </div>
-        </form>
-      </div>
-
-      <!-- Driver Payments -->
-      <div class="admin-panel">
-        <h4>Edit Driver Payments</h4>
+        <h4>Driver Payments Overview</h4>
         <div class="table-responsive">
           <table class="table table-dark table-hover table-sm">
             <thead>
               <tr>
                 <th>Driver</th>
                 <th>Team</th>
-                <th>Deposit</th>
-                <th>Kit</th>
-                <th>Inst 1</th>
-                <th>Inst 2</th>
-                <th>Total</th>
-                <th>Outstanding</th>
-                <th></th>
+                <?php foreach ($installments as $inst): ?>
+                  <th class="text-center"><?php echo htmlspecialchars($inst['name']); ?></th>
+                <?php endforeach; ?>
+                <th class="text-end">Total</th>
+                <th class="text-end">Outstanding</th>
               </tr>
             </thead>
             <tbody>
-              <?php foreach ($paymentData['drivers'] as $name => $driver): ?>
+              <?php foreach ($drivers as $driver): ?>
                 <?php
-                $totalPaid = $driver['deposit'] + $driver['team_kit'] + $driver['installment1'] + $driver['installment2'];
-                $expected = $driver['is_driver'] ? ($paymentData['total_per_driver'] + $paymentData['team_kit_fee']) : 0;
+                $totalPaid = 0;
+                foreach ($installments as $inst) {
+                    $totalPaid += getPaymentTotal($db, $driver['id'], $inst['id']);
+                }
+                $expected = $driver['is_driver'] ? ($totalPerDriver + $teamKitFee) : 0;
                 $outstanding = $expected - $totalPaid;
                 ?>
                 <tr>
-                  <td><strong><?php echo htmlspecialchars($name); ?></strong></td>
-                  <td><?php echo htmlspecialchars($driver['team']); ?></td>
-                  <td>£<?php echo number_format($driver['deposit'], 0); ?></td>
-                  <td>£<?php echo number_format($driver['team_kit'], 0); ?></td>
-                  <td>£<?php echo number_format($driver['installment1'], 0); ?></td>
-                  <td>£<?php echo number_format($driver['installment2'], 0); ?></td>
-                  <td><strong>£<?php echo number_format($totalPaid, 0); ?></strong></td>
-                  <td><?php echo $driver['is_driver'] ? '£' . number_format($outstanding, 0) : '-'; ?></td>
-                  <td>
-                    <button class="btn btn-sm btn-primary" onclick="editDriver('<?php echo htmlspecialchars($name); ?>')">Edit</button>
+                  <td><strong><?php echo htmlspecialchars($driver['name']); ?></strong></td>
+                  <td><?php echo htmlspecialchars($driver['team_name']); ?></td>
+                  <?php foreach ($installments as $inst): ?>
+                    <?php $paid = getPaymentTotal($db, $driver['id'], $inst['id']); ?>
+                    <td class="text-center">£<?php echo number_format($paid, 2); ?></td>
+                  <?php endforeach; ?>
+                  <td class="text-end"><strong>£<?php echo number_format($totalPaid, 2); ?></strong></td>
+                  <td class="text-end <?php echo $outstanding <= 0 ? 'paid' : 'unpaid'; ?>">
+                    <?php echo $driver['is_driver'] ? '£' . number_format($outstanding, 2) : '-'; ?>
                   </td>
                 </tr>
               <?php endforeach; ?>
             </tbody>
           </table>
         </div>
-
-        <!-- Edit Form -->
-        <div id="editForm" style="display: none;" class="mt-3 p-3 border border-secondary rounded">
-          <h5>Edit: <span id="editDriverName"></span></h5>
-          <form method="POST" class="row g-3">
-            <input type="hidden" name="driver" id="editDriverInput">
-            <div class="col-3">
-              <label class="form-label small">Deposit (£)</label>
-              <input type="number" name="deposit" id="editDeposit" class="form-control form-control-sm" step="0.01" min="0" required>
-            </div>
-            <div class="col-3">
-              <label class="form-label small">Team Kit (£)</label>
-              <input type="number" name="team_kit" id="editTeamKit" class="form-control form-control-sm" step="0.01" min="0" required>
-            </div>
-            <div class="col-3">
-              <label class="form-label small">Installment 1 (£)</label>
-              <input type="number" name="installment1" id="editInstallment1" class="form-control form-control-sm" step="0.01" min="0" required>
-            </div>
-            <div class="col-3">
-              <label class="form-label small">Installment 2 (£)</label>
-              <input type="number" name="installment2" id="editInstallment2" class="form-control form-control-sm" step="0.01" min="0" required>
-            </div>
-            <div class="col-12">
-              <button type="submit" name="update_payment" class="btn btn-success btn-sm">Save</button>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="cancelEdit()">Cancel</button>
-            </div>
-          </form>
-        </div>
       </div>
 
       <script>
-        const drivers = <?php echo json_encode($paymentData['drivers']); ?>;
+        const installments = <?php echo json_encode($installments); ?>;
 
-        function editDriver(name) {
-          document.getElementById('editForm').style.display = 'block';
-          document.getElementById('editDriverName').textContent = name;
-          document.getElementById('editDriverInput').value = name;
-          document.getElementById('editDeposit').value = drivers[name].deposit;
-          document.getElementById('editTeamKit').value = drivers[name].team_kit;
-          document.getElementById('editInstallment1').value = drivers[name].installment1;
-          document.getElementById('editInstallment2').value = drivers[name].installment2;
-          document.getElementById('editForm').scrollIntoView({ behavior: 'smooth' });
+        function editInstallment(id) {
+          const inst = installments.find(i => i.id == id);
+          if (!inst) return;
+
+          document.getElementById('installmentFormTitle').textContent = 'Edit Installment';
+          document.getElementById('installment_id').value = inst.id;
+          document.getElementById('installment_name').value = inst.name;
+          document.getElementById('installment_due_date').value = inst.due_date || '';
+          document.getElementById('installment_amount').value = inst.amount_per_driver;
+          document.getElementById('addInstallmentBtn').style.display = 'none';
+          document.getElementById('updateInstallmentBtn').style.display = 'inline-block';
+          document.getElementById('installmentForm').scrollIntoView({ behavior: 'smooth' });
         }
 
-        function cancelEdit() {
-          document.getElementById('editForm').style.display = 'none';
+        function resetInstallmentForm() {
+          document.getElementById('installmentFormTitle').textContent = 'Add New Installment';
+          document.getElementById('installmentForm').reset();
+          document.getElementById('addInstallmentBtn').style.display = 'inline-block';
+          document.getElementById('updateInstallmentBtn').style.display = 'none';
         }
       </script>
     <?php endif; ?>
   </div>
 
   <footer style="background: #000; color: #ccc; text-align: center; padding: 20px 0; margin-top: 3rem;">
-    &copy; Raven Motorsport 2025. <a href="/" style="color: #ccc; text-decoration: none;">Back to Home</a>
+    &copy; Raven Motorsport 2026. <a href="/" style="color: #ccc; text-decoration: none;">Back to Home</a>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

@@ -28,12 +28,27 @@ sshpass -p 'EqualPurpleMouse' ssh -o StrictHostKeyChecking=no root@192.168.0.23 
 
 - **Admin Passcode**: 3040
 - **Data File**: `payment_data.json` (auto-created in the public directory)
-- **Access**: `/payments.php`
+- **Access**: `/payments` (clean URL)
+
+### Payment Structure (2026 Season)
+- **Total Entry:** £3,350 × 2 teams = £6,700
+- **Drivers:** 10 drivers (5 per team - Alpha & Bravo)
+- **Cost per driver:** £670
+
+**Payment Schedule:**
+- **Deposit:** £200.00 per driver = £2,000 total
+- **Installment 1:** £223.50 per driver = £2,233.32 total (£1,116.66 per team)
+- **Installment 2:** £246.50 per driver = £2,466.68 total (remainder)
+- **Team Kit:** Optional add-on fee (configurable)
 
 ### Features
-- Driver portal: select name and view payment status
-- Admin panel: manage all driver payments, deadlines, and totals
-- Pre-loaded with deposit data from 2026 season
+- All driver payments visible on one page (no selection needed)
+- Expected amounts shown for each payment (e.g., "£200 / £200")
+- Color-coded status: Green (paid), Red (unpaid), Yellow (pending), Orange (partial)
+- Drivers grouped by team (Alpha, Bravo, Management)
+- Managers have separate section with no installment requirements
+- Admin panel: manage payments, deadlines, and expected amounts
+- Fully mobile responsive
 
 ## Website Structure
 

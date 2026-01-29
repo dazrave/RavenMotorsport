@@ -43,12 +43,21 @@ sshpass -p 'EqualPurpleMouse' ssh -o StrictHostKeyChecking=no root@192.168.0.23 
 
 ### Features
 - All driver payments visible on one page (no selection needed)
-- Expected amounts shown for each payment (e.g., "£200 / £200")
-- Color-coded status: Green (paid), Red (unpaid), Yellow (pending), Orange (partial)
+- Clean table layout with checkmarks for paid items
+- Simple color scheme: Green checkmarks (✓) for paid, yellow amounts for partial, gray (-) for unpaid
 - Drivers grouped by team (Alpha, Bravo, Management)
 - Managers have separate section with no installment requirements
-- Admin panel: manage payments, deadlines, and expected amounts
 - Fully mobile responsive
+
+### Admin Features
+- **Payment Logging System**: Log individual payments as they come in
+  - Select driver, payment type (deposit/installment 1/installment 2/team kit), and amount
+  - Payments automatically accumulate (e.g., £100 now + £100 later = £200 total)
+  - Tracks payment history with timestamps
+  - Shows last 10 payments
+- Manual edit mode for correcting totals
+- Configure deadlines and expected amounts
+- View total collected and outstanding balances
 
 ## Website Structure
 

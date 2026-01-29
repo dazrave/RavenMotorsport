@@ -138,8 +138,13 @@
         If we run with up to <strong>eight drivers</strong> per team, the final cost will be reduced accordingly.  
       </p>
       <p class="text-center">
-        Payments are made in three stages — a deposit followed by two instalments on  
+        Payments are made in three stages — a deposit followed by two instalments on
         <strong>1 February</strong> and <strong>1 March</strong>.
+      </p>
+      <p class="text-center mt-3">
+        <a href="/payments.php" class="btn btn-outline-light" style="background: #8b241d; border-color: #8b241d;">
+          View Payment Tracker
+        </a>
       </p>
       <p class="text-center mt-3">
         The exact per-driver payment amount will be adjusted once final team sizes are confirmed.  

@@ -37,10 +37,17 @@ sshpass -p 'EqualPurpleMouse' ssh -o StrictHostKeyChecking=no root@192.168.0.23 
 
 ## Website Structure
 
-- `index.php` - Homepage with team lineup and countdown
-- `info.php` - Detailed team information and logistics
-- `payments.php` - Payment tracking system
+- `index.php` - Homepage with team lineup and countdown (accessible at `/` or `/index`)
+- `info.php` - Detailed team information and logistics (accessible at `/info`)
+- `payments.php` - Payment tracking system (accessible at `/payments`)
 - `payment_data.json` - Payment data storage (not in git)
+
+## Clean URLs
+
+The site uses clean URLs without .php extensions:
+- `/payments` instead of `/payments.php`
+- `/info` instead of `/info.php`
+- Nginx is configured with `try_files $uri $uri/ $uri.php?$args;` to handle this automatically
 
 ## Notes
 

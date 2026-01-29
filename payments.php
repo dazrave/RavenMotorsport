@@ -267,6 +267,40 @@ function abbreviateName($fullName) {
     return $fullName;
 }
 
+// Calculate days until deadline
+function daysToDeadline($dueDate) {
+    if (!$dueDate) return null;
+
+    $today = new DateTime('today');
+    $deadline = new DateTime($dueDate);
+    $diff = $today->diff($deadline);
+
+    if ($deadline < $today) {
+        // Overdue
+        return -$diff->days;
+    } else {
+        // Days remaining
+        return $diff->days;
+    }
+}
+
+// Get urgency class for styling
+function getUrgencyClass($daysRemaining) {
+    if ($daysRemaining === null) return '';
+    if ($daysRemaining < 0) return 'deadline-overdue';
+    if ($daysRemaining <= 7) return 'deadline-urgent';
+    if ($daysRemaining <= 14) return 'deadline-soon';
+    return 'deadline-ok';
+}
+
+// Format days remaining message
+function formatDaysRemaining($daysRemaining) {
+    if ($daysRemaining === null) return '';
+    if ($daysRemaining < 0) return abs($daysRemaining) . ' day' . (abs($daysRemaining) != 1 ? 's' : '') . ' overdue';
+    if ($daysRemaining == 0) return 'Due today!';
+    return $daysRemaining . ' day' . ($daysRemaining != 1 ? 's' : '') . ' left';
+}
+
 // Get total collected and outstanding
 $totalCollected = $db->querySingle("SELECT SUM(amount) FROM payments") ?: 0;
 $totalPerDriver = floatval($db->querySingle("SELECT value FROM settings WHERE key='total_per_driver'") ?: 670);
@@ -357,6 +391,47 @@ if (isset($_SESSION['admin'])) {
       color: #8b241d;
       display: block;
       margin-bottom: 0.5rem;
+    }
+    .days-remaining {
+      display: block;
+      font-weight: bold;
+      margin-top: 0.5rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    .deadline-overdue {
+      background: #dc3545;
+      color: #fff;
+    }
+    .deadline-urgent {
+      background: #ff6b35;
+      color: #fff;
+    }
+    .deadline-soon {
+      background: #ffc107;
+      color: #000;
+    }
+    .deadline-ok {
+      background: #28a745;
+      color: #fff;
+    }
+    /* Badge versions for admin table */
+    .badge.deadline-overdue {
+      background: #dc3545 !important;
+      color: #fff !important;
+    }
+    .badge.deadline-urgent {
+      background: #ff6b35 !important;
+      color: #fff !important;
+    }
+    .badge.deadline-soon {
+      background: #ffc107 !important;
+      color: #000 !important;
+    }
+    .badge.deadline-ok {
+      background: #28a745 !important;
+      color: #fff !important;
     }
     table {
       background: #1a1a1a;
@@ -510,10 +585,18 @@ if (isset($_SESSION['admin'])) {
         <div class="deadline-grid">
           <?php foreach ($installments as $inst): ?>
             <?php if ($inst['amount_per_driver'] > 0): ?>
+            <?php
+            $daysRemaining = daysToDeadline($inst['due_date']);
+            $urgencyClass = getUrgencyClass($daysRemaining);
+            $daysMessage = formatDaysRemaining($daysRemaining);
+            ?>
             <div class="deadline-item">
               <strong><?php echo htmlspecialchars($inst['name']); ?></strong>
               £<?php echo number_format($inst['amount_per_driver'], 2); ?><br>
               <small>Due: <?php echo $inst['due_date'] ? date('d M Y', strtotime($inst['due_date'])) : 'TBD'; ?></small>
+              <?php if ($daysMessage): ?>
+                <span class="days-remaining <?php echo $urgencyClass; ?>"><?php echo $daysMessage; ?></span>
+              <?php endif; ?>
             </div>
             <?php endif; ?>
           <?php endforeach; ?>
@@ -779,6 +862,7 @@ if (isset($_SESSION['admin'])) {
               <tr>
                 <th>Installment</th>
                 <th>Due Date</th>
+                <th>Days</th>
                 <th>Per Driver</th>
                 <th class="text-center">Alpha Collected</th>
                 <th class="text-center">Bravo Collected</th>
@@ -792,10 +876,20 @@ if (isset($_SESSION['admin'])) {
                 $alphaTotal = getTeamInstallmentTotals($db, 'Alpha', $inst['id']);
                 $bravoTotal = getTeamInstallmentTotals($db, 'Bravo', $inst['id']);
                 $instTotal = $alphaTotal + $bravoTotal;
+                $daysRemaining = daysToDeadline($inst['due_date']);
+                $urgencyClass = getUrgencyClass($daysRemaining);
+                $daysMessage = formatDaysRemaining($daysRemaining);
                 ?>
                 <tr>
                   <td><strong><?php echo htmlspecialchars($inst['name']); ?></strong></td>
                   <td><?php echo $inst['due_date'] ? date('d M Y', strtotime($inst['due_date'])) : 'TBD'; ?></td>
+                  <td>
+                    <?php if ($daysMessage): ?>
+                      <span class="badge <?php echo $urgencyClass; ?>" style="font-size: 0.8rem;"><?php echo $daysMessage; ?></span>
+                    <?php else: ?>
+                      <span class="text-muted">-</span>
+                    <?php endif; ?>
+                  </td>
                   <td>£<?php echo number_format($inst['amount_per_driver'], 2); ?></td>
                   <td class="text-center">£<?php echo number_format($alphaTotal, 2); ?></td>
                   <td class="text-center">£<?php echo number_format($bravoTotal, 2); ?></td>

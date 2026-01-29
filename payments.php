@@ -40,6 +40,25 @@ if (!file_exists($dataFile)) {
 // Load payment data
 $paymentData = json_decode(file_get_contents($dataFile), true);
 
+// Ensure data loaded correctly
+if (!is_array($paymentData)) {
+    $paymentData = [
+        'drivers' => [],
+        'deadlines' => [
+            'deposit' => '2026-01-01',
+            'installment1' => '2026-02-01',
+            'installment2' => '2026-03-01'
+        ],
+        'total_per_driver' => 670,
+        'team_kit_fee' => 0,
+        'expected_amounts' => [
+            'deposit' => 200,
+            'installment1' => 223.50,
+            'installment2' => 246.50
+        ]
+    ];
+}
+
 // Ensure team_kit_fee exists
 if (!isset($paymentData['team_kit_fee'])) {
     $paymentData['team_kit_fee'] = 0;
@@ -54,13 +73,21 @@ if (!isset($paymentData['expected_amounts'])) {
     ];
 }
 
+// Ensure drivers array exists
+if (!isset($paymentData['drivers']) || !is_array($paymentData['drivers'])) {
+    $paymentData['drivers'] = [];
+}
+
 // Ensure all drivers have required fields
 foreach ($paymentData['drivers'] as $name => &$driver) {
+    if (!is_array($driver)) {
+        continue;
+    }
     if (!isset($driver['team_kit'])) {
         $driver['team_kit'] = 0;
     }
     if (!isset($driver['is_driver'])) {
-        $driver['is_driver'] = ($driver['team'] !== 'Management');
+        $driver['is_driver'] = (isset($driver['team']) && $driver['team'] !== 'Management');
     }
 }
 
